@@ -1,0 +1,13 @@
+http://{$PUBLIC_HOST} {
+  encode zstd gzip
+
+  @graphql {
+    path /graphql*
+  }
+  @bgio {
+    path /socket.io* /games/*
+  }
+  reverse_proxy @graphql 127.0.0.1:3001
+  reverse_proxy @bgio 127.0.0.1:8001
+  reverse_proxy 127.0.0.1:3000
+}
