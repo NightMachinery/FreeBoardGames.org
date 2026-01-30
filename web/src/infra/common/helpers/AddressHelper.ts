@@ -7,7 +7,8 @@ export default class AddressHelper {
     if (!window || window.location.hostname === 'localhost') {
       return 'ws://localhost:3001/graphql';
     } else {
-      return `wss://${window.location.hostname}/graphql`;
+      const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      return `${scheme}://${window.location.host}/graphql`;
     }
   }
 }
