@@ -20,6 +20,7 @@ helm/values.prod.yaml
 
 # local self-hosting/runtime files
 .env.local
+.env.http.local
 Caddyfile
 dev.db
 fbg-server/dev.db

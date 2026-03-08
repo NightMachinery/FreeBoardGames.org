@@ -2,6 +2,13 @@
 
 This is the simplest non-Docker setup for a single VPS.
 
+This HTTP workflow uses its own env file:
+
+- HTTP/tmux workflow: `.env.http.local`
+- existing HTTPS/Caddy workflow: `.env.local`
+
+So it does not step on `prepare_once.zsh` / `run.zsh`.
+
 Target host in this guide:
 
 - app URL: `http://pinky.lilf.ir:3000`
@@ -47,10 +54,20 @@ cd FreeBoardGames.org
 chmod +x run_tmux_http.zsh
 ```
 
-## 3) Create `.env.local`
+## 3) Create `.env.http.local`
+
+Recommended:
+
+```zsh
+./run_tmux_http.zsh env-init pinky.lilf.ir:3000
+```
+
+That writes `.env.http.local`.
+
+If you want to write it manually instead:
 
 ```bash
-cat > .env.local <<'EOF'
+cat > .env.http.local <<'EOF'
 PUBLIC_HOST=pinky.lilf.ir:3000
 PUBLIC_URL=http://pinky.lilf.ir:3000
 SERVER_PORT=3000
@@ -66,13 +83,11 @@ BACKEND_NODE_ENV=development
 EOF
 ```
 
-Generate a better JWT secret:
+You can also point the script at a different file:
 
-```bash
-openssl rand -hex 32
+```zsh
+ENV_FILE=/path/to/my-http.env ./run_tmux_http.zsh start
 ```
-
-Then replace `replace-this-with-a-random-secret`.
 
 ## 4) Install dependencies and build
 
@@ -144,3 +159,4 @@ http://pinky.lilf.ir:3000
 - You can keep `3001` and `8001` private.
 - `BACKEND_NODE_ENV=development` is intentional here; it avoids Redis for a single-VPS setup.
 - If you later want a Redis-backed production backend, set `BACKEND_NODE_ENV=production` and add the Redis env vars before starting.
+- HTTPS/Caddy scripts still use `.env.local`; this HTTP workflow reads `.env.http.local`.

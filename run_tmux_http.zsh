@@ -6,6 +6,8 @@ ROOT_DIR=$(cd "$(dirname "$0")" && pwd)
 cd "$ROOT_DIR"
 
 NODE_VERSION="${NODE_VERSION:-$(<"$ROOT_DIR/.nvmrc")}"
+ENV_FILE="${ENV_FILE:-$ROOT_DIR/.env.http.local}"
+DEFAULT_PUBLIC_HOST="${DEFAULT_PUBLIC_HOST:-pinky.lilf.ir:3000}"
 
 SESSION_WEB="fbg-http-web"
 SESSION_BGIO="fbg-http-bgio"
@@ -35,14 +37,58 @@ load_node() {
   nvm use "$NODE_VERSION"
 }
 
-load_repo_env() {
-  if [[ -f "$ROOT_DIR/.env.local" ]]; then
-    set -a
-    source "$ROOT_DIR/.env.local"
-    set +a
+normalize_host() {
+  local host="${1:-$DEFAULT_PUBLIC_HOST}"
+  host="${host#http://}"
+  host="${host#https://}"
+  host="${host%%/}"
+  print -r -- "$host"
+}
+
+generate_jwt_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+  else
+    print -r -- "replace-this-with-a-random-secret"
+  fi
+}
+
+init_env_file() {
+  local host
+  host="$(normalize_host "${1:-$DEFAULT_PUBLIC_HOST}")"
+  local jwt_secret
+  jwt_secret="$(generate_jwt_secret)"
+
+  if [[ -f "$ENV_FILE" && "${FORCE_ENV_INIT:-false}" != "true" ]]; then
+    die "$ENV_FILE already exists. Remove it first or rerun with FORCE_ENV_INIT=true."
   fi
 
-  export PUBLIC_HOST="${PUBLIC_HOST:-pinky.lilf.ir:3000}"
+  cat > "$ENV_FILE" <<EOF
+PUBLIC_HOST=$host
+PUBLIC_URL=http://$host
+SERVER_PORT=3000
+BGIO_PORT=8001
+FBG_BACKEND_TARGET=http://127.0.0.1:3001
+BGIO_PRIVATE_SERVERS=http://127.0.0.1:8001
+BGIO_PUBLIC_SERVERS=http://$host
+CHANNEL=production
+FORCE_DB_SYNC=true
+JWT_SECRET=$jwt_secret
+WEB_NODE_ENV=production
+BACKEND_NODE_ENV=development
+EOF
+
+  say "Wrote $ENV_FILE"
+}
+
+load_repo_env() {
+  [[ -f "$ENV_FILE" ]] || die "Missing $ENV_FILE. Run ./run_tmux_http.zsh env-init [host:port] first."
+
+  set -a
+  source "$ENV_FILE"
+  set +a
+
+  export PUBLIC_HOST="${PUBLIC_HOST:-$DEFAULT_PUBLIC_HOST}"
   export PUBLIC_URL="${PUBLIC_URL:-http://${PUBLIC_HOST}}"
   export SERVER_PORT="${SERVER_PORT:-3000}"
   export BGIO_PORT="${BGIO_PORT:-8001}"
@@ -216,6 +262,9 @@ show_logs() {
 
 main() {
   case "${1:-start}" in
+    env-init)
+      init_env_file "${2:-$DEFAULT_PUBLIC_HOST}"
+      ;;
     install)
       install_local
       ;;
@@ -239,7 +288,7 @@ main() {
       show_logs "${2:-}"
       ;;
     *)
-      die "Usage: ./run_tmux_http.zsh [install|start|stop|restart|status|attach <web|bgio|backend>|logs <web|bgio|backend>]"
+      die "Usage: ./run_tmux_http.zsh [env-init [host:port]|install|start|stop|restart|status|attach <web|bgio|backend>|logs <web|bgio|backend>]"
       ;;
   esac
 }
