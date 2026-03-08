@@ -17,3 +17,10 @@ web/src/games/index.ts
 helm/values.staging.yaml
 helm/values.prod.yaml
 .DS_Store
+
+# local self-hosting/runtime files
+.env.local
+Caddyfile
+dev.db
+fbg-server/dev.db
+tmp

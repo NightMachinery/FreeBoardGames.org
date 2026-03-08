@@ -9,6 +9,8 @@ import { setupLogging } from './logging';
 import { generateSiteMapXML } from './sitemap';
 
 const INTERNAL_BACKEND_TARGET = process.env.FBG_BACKEND_TARGET || 'http://localhost:3001';
+const INTERNAL_BGIO_TARGET =
+  process.env.FBG_BGIO_TARGET || firstUrl(process.env.BGIO_PRIVATE_SERVERS, 'http://127.0.0.1:8001');
 const dev = process.env.NODE_ENV !== 'production';
 const BABEL_ENV_IS_PROD = (process.env.BABEL_ENV || 'production') === 'production';
 const APP_DIR = './';
@@ -33,6 +35,16 @@ app
   .prepare()
   .then(() => {
     const server = express();
+    const graphqlProxy = createProxyMiddleware({
+      target: INTERNAL_BACKEND_TARGET,
+      changeOrigin: true,
+      ws: true,
+    });
+    const bgioProxy = createProxyMiddleware({
+      target: INTERNAL_BGIO_TARGET,
+      changeOrigin: true,
+      ws: true,
+    });
     server.disable('x-powered-by');
     server.use(cookieParser());
     setupLogging(server, 'fbg-web');
@@ -81,15 +93,28 @@ app
 
     server.use('/docs', express.static(`${STATIC_DIR}/docs`));
 
-    server.use('/graphql', createProxyMiddleware({ target: INTERNAL_BACKEND_TARGET, changeOrigin: true }));
+    server.use('/graphql', graphqlProxy);
+    server.use('/socket.io', bgioProxy);
+    server.use('/games', bgioProxy);
 
     server.get('*', csrfProtection, (req, res) => {
       res.cookie('XSRF-TOKEN', (req as any).csrfToken());
       return handle(req, res);
     });
 
-    server.listen(PORT, () => {
+    const httpServer = server.listen(PORT, () => {
       console.log(`Listening on http://0.0.0.0:${PORT}`);
+    });
+
+    httpServer.on('upgrade', (req, socket, head) => {
+      const reqUrl = req.url || '';
+      if (reqUrl.startsWith('/graphql')) {
+        (graphqlProxy as any).upgrade(req, socket, head);
+        return;
+      }
+      if (reqUrl.startsWith('/socket.io')) {
+        (bgioProxy as any).upgrade(req, socket, head);
+      }
     });
   })
   .catch((e) => {
@@ -101,4 +126,15 @@ function isOfficialSite(rawHostname: string) {
   const hostname = rawHostname.toLowerCase();
   const officialSite = hostname === DOMAIN;
   return officialSite;
+}
+
+function firstUrl(rawServers: string | undefined, fallback: string) {
+  if (!rawServers) {
+    return fallback;
+  }
+  const firstServer = rawServers
+    .split(',')
+    .map((server) => server.trim())
+    .find(Boolean);
+  return firstServer || fallback;
 }
