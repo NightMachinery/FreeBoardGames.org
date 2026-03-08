@@ -115,6 +115,10 @@ describe('RoomsService', () => {
 
     const result = await service.joinRoom(aliceId, room.id);
     expect(result.id).toEqual(room.id);
+    const newRoom = await service.getRoomEntity(room.id);
+    expect(newRoom.userMemberships).toHaveLength(2);
+    expect(newRoom.userMemberships.filter((membership) => membership.user.id === aliceId)).toHaveLength(1);
+    expect(newRoom.userMemberships.find((membership) => membership.user.id === bobId)?.isCreator).toEqual(true);
   });
 
   it('should joinRoom successfully', async () => {

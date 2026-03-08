@@ -87,4 +87,33 @@ describe('Room Start Match Button', () => {
     expect(wrapper.find(Button).at(1).getDOMNode()).toBeEnabled();
     expect(wrapper.find(Button).first().text()).toBe('Start match');
   });
+
+  it('should show enabled button if creator is not first in the list', async () => {
+    const metadata: JoinRoom_joinRoom = {
+      __typename: 'Room' as const,
+      gameCode: 'chess',
+      capacity: 2,
+      isPublic: false,
+      userId: 2,
+      matchId: null,
+      userMemberships: [
+        {
+          __typename: 'RoomMembership' as const,
+          isCreator: false,
+          position: 1,
+          user: { nickname: 'alice', id: 1, __typename: 'User' as const },
+        },
+        {
+          __typename: 'RoomMembership' as const,
+          isCreator: true,
+          position: 2,
+          user: { nickname: 'bob', id: 2, __typename: 'User' as const },
+        },
+      ],
+    };
+    const wrapper = mount(<StartMatchButton roomMetadata={metadata} userId={2} startMatch={() => {}} />);
+    expect(wrapper.find(Button).at(0).getDOMNode()).toBeEnabled();
+    expect(wrapper.find(Button).at(1).getDOMNode()).toBeEnabled();
+    expect(wrapper.find(Button).first().text()).toBe('Start match');
+  });
 });

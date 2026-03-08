@@ -5,7 +5,6 @@ import { Injectable } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 import { Repository } from 'typeorm';
 import { lobbyToGql } from './RoomUtil';
-import { EXPIRE_MEMBERSHIP_AFTER_MS } from './constants';
 import { FBG_PUB_SUB } from '../internal/FbgPubSubModule';
 
 @Injectable()
@@ -23,9 +22,6 @@ export class LobbyService {
         .createQueryBuilder('room')
         .innerJoinAndSelect('room.userMemberships', 'userMemberships')
         .where('room.isPublic')
-        .andWhere('userMemberships.lastSeen >= :timeout', {
-          timeout: Date.now() - EXPIRE_MEMBERSHIP_AFTER_MS,
-        })
         .andWhere('room.match IS NULL')
         .orderBy({
           'room.id': 'DESC',

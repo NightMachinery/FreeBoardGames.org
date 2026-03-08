@@ -185,6 +185,64 @@ describe('MatchService', () => {
     await expect(result).rejects.toThrow();
   });
 
+  it('should fail to start match for the first-position player if they are not the creator', async () => {
+    const bobId = await usersService.newUser({ nickname: 'bob' });
+    const room = await roomsService.newRoom(
+      {
+        capacity: 2,
+        gameCode: 'checkers',
+        isPublic: false,
+      },
+      bobId,
+    );
+    const aliceId = await usersService.newUser({ nickname: 'alice' });
+    await roomsService.joinRoom(aliceId, room.id);
+    await roomsService.moveUserUp(bobId, aliceId, room.id);
+
+    const updatedRoom = await roomsService.getRoomEntity(room.id);
+    expect(updatedRoom.userMemberships[0].user.id).toEqual(aliceId);
+    expect(updatedRoom.userMemberships[0].isCreator).toEqual(false);
+
+    const result = service.startMatch(room.id, aliceId);
+    await expect(result).rejects.toThrow();
+  });
+
+  it('should allow the creator to start match even if they are not first by position', async () => {
+    const promiseMock = jest
+      .fn()
+      .mockReturnValueOnce(Promise.resolve({ data: { matchID: 'bgioGameId' } }))
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '1stSecret' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '2ndSecret' } }),
+      );
+    jest
+      .spyOn(httpService, 'post')
+      .mockReturnValue({ toPromise: promiseMock } as any);
+    const bobId = await usersService.newUser({ nickname: 'bob' });
+    const room = await roomsService.newRoom(
+      {
+        capacity: 2,
+        gameCode: 'checkers',
+        isPublic: false,
+      },
+      bobId,
+    );
+
+    const aliceId = await usersService.newUser({ nickname: 'alice' });
+    await roomsService.joinRoom(aliceId, room.id);
+    await roomsService.moveUserUp(bobId, aliceId, room.id);
+
+    const updatedRoom = await roomsService.getRoomEntity(room.id);
+    expect(updatedRoom.userMemberships[0].user.id).toEqual(aliceId);
+    expect(updatedRoom.userMemberships[1].user.id).toEqual(bobId);
+    expect(updatedRoom.userMemberships[1].isCreator).toEqual(true);
+
+    const matchId = await service.startMatch(room.id, bobId);
+    expect(matchId).toBeDefined();
+  });
+
   it('should start match', async () => {
     const promiseMock = jest
       .fn()
