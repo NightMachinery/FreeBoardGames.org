@@ -46,10 +46,31 @@ describe('Secretcodes UI', () => {
   });
 
   it('should render PlayBoard', () => {
-    wrapper.setProps({ ctx: { activePlayers: { '1': {} }, currentPlayer: '1', phase: Phases.guess } });
+    const state = client.store.getState();
+    wrapper.setProps({
+      G: { ...state.G, currentTeamIndex: 0 },
+      ctx: { activePlayers: { '1': {} }, currentPlayer: '1', phase: Phases.guess },
+    });
 
     expect(wrapper.find('GameLayout').exists()).toBeTruthy();
     expect(wrapper.find(PlayBoard).exists()).toBeTruthy();
+  });
+
+  it('should treat the creator as host in online games even when they are not player 0', () => {
+    wrapper.setProps({
+      playerID: '1',
+      gameArgs: {
+        gameCode: 'secretcodes',
+        mode: GameMode.OnlineFriend,
+        hostPlayerID: '1',
+        players: [
+          { playerID: 0, name: 'foo' },
+          { playerID: 1, name: 'bar' },
+        ],
+      },
+    });
+
+    expect(wrapper.find('Lobby').prop('isHost')).toEqual(true);
   });
 
   it('should show gameover, red team wins', () => {

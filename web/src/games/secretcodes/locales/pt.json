@@ -16,13 +16,18 @@
   "blue_team": "Time Azul",
   "red_team": "Time Vermelho",
   "unassigned": "Sem time",
-  "in_order_to_start": "Para iniciar o jogo, todos os jogadores precisam escolher um time e ambos times precisam de um lider.",
+  "in_order_to_start": "Para iniciar o jogo, todos os jogadores precisam escolher um time e cada time precisa de pelo menos um líder.",
   "play": "Pronto, jogar!",
   "s": "[L] ",
+  "r": "[R] ",
   "make_spymaster": "Fazer Lider",
+  "remove_spymaster": "Remover Líder",
+  "make_representative": "Fazer Representante",
+  "remove_representative": "Remover Representante",
   "select": "Selecionar",
   "toggle_view_spymaster": "Mudar Visão: Lider",
   "toggle_view_normal": "Mudar Visão: Normal",
   "pass": "Passar",
-  "spymaster_give_clue": "<strong>{{ name }}</strong> dê a dica"
+  "spymaster_give_clue": "<strong>{{ name }}</strong> dê a dica",
+  "spymasters_give_clue": "<strong>{{ names }}</strong> deem as dicas"
 }

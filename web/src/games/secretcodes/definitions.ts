@@ -6,7 +6,8 @@ export enum TeamColor {
 export interface Team {
   color: TeamColor;
   playersID: string[];
-  spymasterID: null | string;
+  spymasterIDs: string[];
+  representativeIDs: string[];
 }
 
 export enum CardColor {
@@ -29,12 +30,14 @@ export interface Card {
 export interface IG {
   teams: Team[];
   cards: Card[];
+  hostPlayerID: string;
   currentTeamIndex?: number;
   /**
    * The index of the last card selected by any team. Null at the beggining of
    * the round.
    */
   lastSelectedCardIndex: null | number;
+  lastSelectedCardTeamColor: null | TeamColor;
 }
 
 export enum Phases {

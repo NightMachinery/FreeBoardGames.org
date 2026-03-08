@@ -3,30 +3,51 @@ import { INVALID_MOVE } from 'boardgame.io/core';
 import { Ctx } from 'boardgame.io';
 
 export function switchTeam(G: IG, ctx: Ctx, teamColor: TeamColor) {
-  const oldTeam = getPlayerTeam(G, ctx.playerID);
+  const actingPlayerID = getActingPlayerID(ctx);
+  const oldTeam = getPlayerTeam(G, actingPlayerID);
   const newTeam = getTeamByColor(G, teamColor);
 
   if (typeof oldTeam !== 'undefined') {
     if (oldTeam.color === teamColor) return;
 
-    if (oldTeam.spymasterID === ctx.playerID) {
-      oldTeam.spymasterID = null;
-    }
-
-    oldTeam.playersID = oldTeam.playersID.filter((id) => id !== ctx.playerID);
+    oldTeam.spymasterIDs = oldTeam.spymasterIDs.filter((id) => id !== actingPlayerID);
+    oldTeam.representativeIDs = oldTeam.representativeIDs.filter((id) => id !== actingPlayerID);
+    oldTeam.playersID = oldTeam.playersID.filter((id) => id !== actingPlayerID);
   }
 
-  newTeam.playersID.push(ctx.playerID);
+  newTeam.playersID.push(actingPlayerID);
 }
 
-export function makeSpymaster(G: IG, ctx: Ctx, playerID: string) {
+export function toggleSpymaster(G: IG, ctx: Ctx, playerID: string) {
   const team = getPlayerTeam(G, playerID);
   const pID = parseInt(playerID);
-  if (ctx.playerID !== '0' || pID < 0 || pID >= ctx.numPlayers || !team) {
+  if (!isHostPlayer(G, ctx) || pID < 0 || pID >= ctx.numPlayers || !team) {
     return INVALID_MOVE;
   }
 
-  team.spymasterID = playerID;
+  if (team.spymasterIDs.includes(playerID)) {
+    team.spymasterIDs = team.spymasterIDs.filter((id) => id !== playerID);
+    return;
+  }
+
+  team.representativeIDs = team.representativeIDs.filter((id) => id !== playerID);
+  team.spymasterIDs = [...team.spymasterIDs, playerID];
+}
+
+export function toggleRepresentative(G: IG, ctx: Ctx, playerID: string) {
+  const team = getPlayerTeam(G, playerID);
+  const pID = parseInt(playerID);
+  if (!isHostPlayer(G, ctx) || pID < 0 || pID >= ctx.numPlayers || !team) {
+    return INVALID_MOVE;
+  }
+
+  if (team.representativeIDs.includes(playerID)) {
+    team.representativeIDs = team.representativeIDs.filter((id) => id !== playerID);
+    return;
+  }
+
+  team.spymasterIDs = team.spymasterIDs.filter((id) => id !== playerID);
+  team.representativeIDs = [...team.representativeIDs, playerID];
 }
 
 export function clueGiven(G: IG, ctx: Ctx) {
@@ -34,19 +55,24 @@ export function clueGiven(G: IG, ctx: Ctx) {
   ctx.events.endPhase();
   if (ctx.numPlayers > 2) {
     const activePlayers = { value: {} };
-    for (const player of getActivePlayersWithoutSpymaster(team, ctx)) {
+    for (const player of getActiveGuessers(team, ctx)) {
       activePlayers.value[player] = null;
     }
     ctx.events.setActivePlayers(activePlayers);
   }
 }
 
-export function getActivePlayersWithoutSpymaster(team: Team, ctx: Ctx): string[] {
-  if (ctx.numPlayers > 2) {
-    return team.playersID.filter((p) => p !== team.spymasterID);
-  } else {
-    return [team.spymasterID];
+export function getActiveGuessers(team: Team, ctx: Ctx): string[] {
+  if (ctx.numPlayers <= 2) {
+    return team.playersID;
   }
+
+  if (team.representativeIDs.length > 0) {
+    return team.representativeIDs;
+  }
+
+  const nonSpymasters = team.playersID.filter((playerID) => !team.spymasterIDs.includes(playerID));
+  return nonSpymasters.length > 0 ? nonSpymasters : team.playersID;
 }
 
 export function getCurrentTeam(G: IG): Team {
@@ -55,11 +81,14 @@ export function getCurrentTeam(G: IG): Team {
 
 export function gameCanStart(G: IG, ctx: Ctx) {
   const { numPlayers } = ctx;
-  if (G.teams[0].spymasterID === null || G.teams[1].spymasterID === null) return false;
+  if (G.teams.some((team) => team.spymasterIDs.length === 0)) return false;
   return G.teams.reduce((sum, t) => sum + t.playersID.length, 0) === numPlayers;
 }
 
 export function startGame(G: IG, ctx: Ctx) {
+  if (!isHostPlayer(G, ctx)) {
+    return INVALID_MOVE;
+  }
   if (!gameCanStart(G, ctx)) {
     return INVALID_MOVE;
   }
@@ -79,21 +108,40 @@ export function startGame(G: IG, ctx: Ctx) {
 }
 
 export function pass(G: IG, ctx: Ctx) {
+  if (!canPlayerGuessCurrentTeam(G, ctx, getActingPlayerID(ctx))) {
+    return INVALID_MOVE;
+  }
+
+  return passTurn(G, ctx);
+}
+
+function passTurn(G: IG, ctx: Ctx) {
   G.currentTeamIndex = (G.currentTeamIndex + 1) % 2;
   ctx.events.endPhase();
 }
 
 export function chooseCard(G: IG, ctx: Ctx, cardIndex: number) {
+  const actingPlayerID = getActingPlayerID(ctx);
+  if (!canPlayerGuessCurrentTeam(G, ctx, actingPlayerID)) {
+    return INVALID_MOVE;
+  }
+  if (G.cards[cardIndex].revealed) {
+    return INVALID_MOVE;
+  }
+  const team = getPlayerTeam(G, actingPlayerID);
+  if (!team) {
+    return INVALID_MOVE;
+  }
+
   const newCards = [...G.cards];
   newCards[cardIndex] = { ...newCards[cardIndex], revealed: true };
   G.cards = newCards;
   G.lastSelectedCardIndex = cardIndex;
-
-  const team = getPlayerTeam(G, ctx.currentPlayer);
+  G.lastSelectedCardTeamColor = team?.color ?? null;
   const color = getCardColorByTeamColor(team.color);
 
   if (G.cards[cardIndex].color !== color) {
-    pass(G, ctx);
+    passTurn(G, ctx);
   }
 }
 
@@ -114,7 +162,7 @@ export function makeCard(word: string): Card {
 }
 
 export function makeTeam(color: TeamColor): Team {
-  return { color, playersID: [], spymasterID: null };
+  return { color, playersID: [], spymasterIDs: [], representativeIDs: [] };
 }
 
 export function getCardColorByTeamColor(color: TeamColor): CardColor {
@@ -129,5 +177,30 @@ export function getCardColorByTeamColor(color: TeamColor): CardColor {
 export function isPlayerSpymaster(G: IG, playerID: string): boolean {
   const team = getPlayerTeam(G, playerID);
 
-  return team?.spymasterID === playerID;
+  return team?.spymasterIDs.includes(playerID) || false;
+}
+
+export function isPlayerRepresentative(G: IG, playerID: string): boolean {
+  const team = getPlayerTeam(G, playerID);
+
+  return team?.representativeIDs.includes(playerID) || false;
+}
+
+export function canPlayerGuessCurrentTeam(G: IG, ctx: Ctx, playerID: string): boolean {
+  const currentTeam = getCurrentTeam(G);
+  const playerTeam = getPlayerTeam(G, playerID);
+
+  if (!currentTeam || !playerTeam || playerTeam.color !== currentTeam.color) {
+    return false;
+  }
+
+  return getActiveGuessers(currentTeam, ctx).includes(playerID);
+}
+
+export function getActingPlayerID(ctx: Ctx): string {
+  return ctx.playerID ?? ctx.currentPlayer ?? '0';
+}
+
+function isHostPlayer(G: IG, ctx: Ctx): boolean {
+  return getActingPlayerID(ctx) === G.hostPlayerID;
 }

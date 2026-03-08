@@ -16,13 +16,18 @@
   "blue_team": "Blue Team",
   "red_team": "Red Team",
   "unassigned": "Unassigned",
-  "in_order_to_start": "In order to start the game all players need to join a team and each team must have a spymaster.",
+  "in_order_to_start": "In order to start the game all players need to join a team and each team must have at least one spymaster.",
   "play": "Done, play!",
   "s": "[S] ",
+  "r": "[R] ",
   "make_spymaster": "Make Spymaster",
+  "remove_spymaster": "Remove Spymaster",
+  "make_representative": "Make Representative",
+  "remove_representative": "Remove Representative",
   "select": "Select",
   "toggle_view_spymaster": "Toggle View: Spymaster",
   "toggle_view_normal": "Toggle View: Normal",
   "pass": "Pass",
-  "spymaster_give_clue": "<strong>{{ name }}</strong> give clue, "
+  "spymaster_give_clue": "<strong>{{ name }}</strong> give clue, ",
+  "spymasters_give_clue": "<strong>{{ names }}</strong> give clues, "
 }

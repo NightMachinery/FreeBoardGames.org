@@ -3,10 +3,15 @@ import { Ctx } from 'boardgame.io';
 import { IGameArgs } from 'gamesShared/definitions/game';
 import * as React from 'react';
 import css from './board.module.css';
-import { isLocalGame, isOnlineGame } from 'gamesShared/helpers/gameMode';
+import { isLocalGame } from 'gamesShared/helpers/gameMode';
 import Button from '@material-ui/core/Button';
-import { IPlayerInRoom } from 'gamesShared/definitions/player';
-import { getPlayerTeam, isPlayerSpymaster } from './util';
+import {
+  canPlayerGuessCurrentTeam,
+  getCurrentTeam,
+  getPlayerTeam,
+  isPlayerRepresentative,
+  isPlayerSpymaster,
+} from './util';
 import { PlayerBadges } from 'gamesShared/components/badges/PlayerBadges';
 import { GameMode } from 'gamesShared/definitions/mode';
 import { Trans, WithCurrentGameTranslation, withCurrentGameTranslation } from 'infra/i18n';
@@ -38,28 +43,16 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     return isLocalGame(this.props.gameArgs) || this.props.isActive;
   }
 
-  _currentPlayerInRoom(): IPlayerInRoom {
-    return this.props.gameArgs.players[this._currentPlayerID()];
-  }
-
-  _currentPlayerTeam(): Team {
-    return getPlayerTeam(this.props.G, this._currentPlayerID());
-  }
-
-  _currentPlayerID(): string {
-    return this.props.ctx.currentPlayer;
+  _currentTeam(): Team {
+    return getCurrentTeam(this.props.G);
   }
 
   _playerID(): string {
     if (isLocalGame(this.props.gameArgs)) {
-      return this._currentPlayerID();
+      return this.props.ctx.currentPlayer;
     } else {
       return this.props.playerID;
     }
-  }
-
-  _playerTeam(): Team {
-    return this.props.G.teams[this._playerID()];
   }
 
   _showSpymasterView = (): boolean =>
@@ -67,16 +60,12 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
   _toggleSpymasterView = (): void => this.setState({ spymasterView: !this.state.spymasterView });
 
-  _clueGiven = () => {
-    if (!this._isActive()) return;
-
-    this.props.moves.clueGiven();
-  };
+  _canGuess = (): boolean => canPlayerGuessCurrentTeam(this.props.G, this.props.ctx, this._playerID());
 
   _chooseCard = (cardIndex: number) => {
     if (!this._isActive()) return;
     if (this.props.ctx.phase !== Phases.guess) return;
-    if (isOnlineGame(this.props.gameArgs) && isPlayerSpymaster(this.props.G, this._playerID())) return;
+    if (!this._canGuess()) return;
     if (this.props.G.cards[cardIndex].revealed) return;
 
     this.props.moves.chooseCard(cardIndex);
@@ -84,28 +73,41 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
   _pass = () => {
     if (!this._isActive()) return;
+    if (!this._canGuess()) return;
 
     this.props.moves.pass();
   };
 
   _renderHeader = () => {
     let instruction;
+    const currentTeam = this._currentTeam();
 
-    const button = this._isActive() ? (
-      <Button className={css.playActionBtn} variant="contained" onClick={this._pass}>
-        {this.props.translate('pass')}
-      </Button>
-    ) : null;
+    const button =
+      this._isActive() && this._canGuess() ? (
+        <Button className={css.playActionBtn} variant="contained" onClick={this._pass}>
+          {this.props.translate('pass')}
+        </Button>
+      ) : null;
     let spymasterInstructions;
     if (this.props.gameArgs.mode === GameMode.OnlineFriend) {
-      const spymasterName = this.props.gameArgs.players[this._currentPlayerTeam().spymasterID].name;
-      spymasterInstructions = <>{this.props.translate('spymaster_give_clue', { name: spymasterName })}</>;
+      const spymasterNames = currentTeam.spymasterIDs
+        .map((playerID) => this.props.gameArgs.players[playerID]?.name)
+        .filter(Boolean)
+        .join(', ');
+      if (spymasterNames) {
+        spymasterInstructions =
+          currentTeam.spymasterIDs.length > 1 ? (
+            <>{this.props.translate('spymasters_give_clue', { names: spymasterNames })}</>
+          ) : (
+            <>{this.props.translate('spymaster_give_clue', { name: spymasterNames })}</>
+          );
+      }
     }
 
     instruction = (
       <p>
         {spymasterInstructions}
-        {this._currentPlayerTeam().color === TeamColor.Red ? (
+        {currentTeam.color === TeamColor.Red ? (
           <Trans t={this.props.translate} i18nKey="red_team_select_cards" components={{ strong: <strong /> }} />
         ) : (
           <Trans t={this.props.translate} i18nKey="blue_team_select_cards" components={{ strong: <strong /> }} />
@@ -116,10 +118,8 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
     return (
       <div className={css.header}>
-        <h3 className={this._currentPlayerTeam().color === TeamColor.Red ? css.redTitle : css.blueTitle}>
-          {this._currentPlayerTeam().color === TeamColor.Red
-            ? this.props.translate('red_team')
-            : this.props.translate('blue_team')}
+        <h3 className={currentTeam.color === TeamColor.Red ? css.redTitle : css.blueTitle}>
+          {currentTeam.color === TeamColor.Red ? this.props.translate('red_team') : this.props.translate('blue_team')}
         </h3>
         {instruction}
       </div>
@@ -166,8 +166,11 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
     const prefixes = this.props.gameArgs.players
       .map((player) => player.playerID.toString())
-      .map((playerID) => isPlayerSpymaster(this.props.G, playerID.toString()))
-      .map((isSpyMaster) => (isSpyMaster ? '🕵' : undefined));
+      .map((playerID) => {
+        if (isPlayerSpymaster(this.props.G, playerID.toString())) return '🕵';
+        if (isPlayerRepresentative(this.props.G, playerID.toString())) return '🗳';
+        return undefined;
+      });
 
     return (
       <PlayerBadges

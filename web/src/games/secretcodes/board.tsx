@@ -2,6 +2,7 @@ import * as React from 'react';
 import { IG, Phases, TeamColor } from './definitions';
 import { Ctx } from 'boardgame.io';
 import { IGameArgs } from 'gamesShared/definitions/game';
+import { GameMode } from 'gamesShared/definitions/mode';
 import css from './board.module.css';
 import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Lobby } from './Lobby';
@@ -23,7 +24,10 @@ interface IBoardProps {
 export function Board({ G, ctx, moves, events, playerID, gameArgs, isActive }: IBoardProps) {
   const { translate } = useCurrentGameTranslation();
 
-  const isHost = () => playerID === '0';
+  const isHost = () =>
+    gameArgs?.mode === GameMode.OnlineFriend
+      ? (gameArgs?.hostPlayerID ?? G.hostPlayerID) === playerID
+      : playerID === '0';
 
   const _renderLobby = () => {
     return (

@@ -6,19 +6,24 @@ import { MatchMembership } from './gql/MatchMembership.gql';
 
 export function matchMembershipEntityToMatchMembership(
   membershipEntity: MatchMembershipEntity,
+  creatorUserId?: number,
 ): MatchMembership {
-  return { user: userEntityToUser(membershipEntity.user) };
+  return {
+    isCreator: membershipEntity.user.id === creatorUserId,
+    user: userEntityToUser(membershipEntity.user),
+  };
 }
 
 export function matchEntityToMatch(entity: MatchEntity, userId: number): Match {
   const memberships = [...entity.playerMemberships];
   memberships.sort((a, b) => a.bgioPlayerId - b.bgioPlayerId);
+  const creatorUserId = entity.room?.userMemberships?.find((membership) => membership.isCreator)?.user.id;
   const match: Match = {
     gameCode: entity.gameCode,
     bgioServerUrl: entity.bgioServerExternalUrl,
     bgioMatchId: entity.bgioMatchId,
     playerMemberships: memberships.map((m) =>
-      matchMembershipEntityToMatchMembership(m),
+      matchMembershipEntityToMatchMembership(m, creatorUserId),
     ),
   };
   const userMembership = entity.playerMemberships.find(

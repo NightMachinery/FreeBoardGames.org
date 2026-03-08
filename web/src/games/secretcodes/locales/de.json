@@ -16,13 +16,18 @@
   "blue_team": "Blaues Team",
   "red_team": "Rotes Team",
   "unassigned": "Nicht zugewiesen",
-  "in_order_to_start": "Um zu Starten muss jeder Spieler einem Team zugewiesen sein und jedes Team braucht einen Spymaster.",
+  "in_order_to_start": "Um zu starten muss jeder Spieler einem Team zugewiesen sein und jedes Team braucht mindestens einen Spymaster.",
   "play": "Fertig, spielen!",
   "s": "[S] ",
+  "r": "[R] ",
   "make_spymaster": "Mache zum Spymaster",
+  "remove_spymaster": "Entferne Spymaster",
+  "make_representative": "Mache zum Vertreter",
+  "remove_representative": "Entferne Vertreter",
   "select": "Auswählen",
   "toggle_view_spymaster": "Sicht ändern: Spymaster",
   "toggle_view_normal": "Sicht ändern: Normal",
   "pass": "Pass",
-  "spymaster_give_clue": "<strong>{{ name }}</strong> gib einen Hinweis, "
+  "spymaster_give_clue": "<strong>{{ name }}</strong> gib einen Hinweis, ",
+  "spymasters_give_clue": "<strong>{{ names }}</strong> geben Hinweise, "
 }

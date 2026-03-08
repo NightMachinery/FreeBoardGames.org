@@ -3,16 +3,18 @@ import { Ctx, Game } from 'boardgame.io';
 import { Card, CardColor, IG, Phases, TeamColor } from './definitions';
 import {
   chooseCard,
-  getActivePlayersWithoutSpymaster,
+  getActiveGuessers,
   getCurrentTeam,
   getOtherTeam,
-  getPlayerTeam,
+  getTeamByColor,
   makeCard,
-  makeSpymaster,
   makeTeam,
   pass,
   startGame,
   switchTeam,
+  toggleRepresentative,
+  toggleSpymaster,
+  isPlayerSpymaster,
 } from './util';
 import { GameCustomizationState } from 'gamesShared/definitions/customization';
 import { DEFAULT_FULL_CUSTOMIZATION, FullCustomizationState } from './customization';
@@ -20,14 +22,14 @@ import { DEFAULT_FULL_CUSTOMIZATION, FullCustomizationState } from './customizat
 const GameConfig: Game<IG> = {
   name: 'secretcodes',
 
-  setup: (ctx, customData: GameCustomizationState): IG => {
+  setup: (ctx, customData: GameCustomizationState & { hostPlayerID?: string }): IG => {
     const fullCustomization = (customData?.full as FullCustomizationState) || DEFAULT_FULL_CUSTOMIZATION;
     const teams = new Array(2).fill(0).map((_, i) => makeTeam(i === 0 ? TeamColor.Blue : TeamColor.Red));
     if (ctx.numPlayers === 2) {
       teams[0].playersID = ['0'];
-      teams[0].spymasterID = '0';
+      teams[0].spymasterIDs = ['0'];
       teams[1].playersID = ['1'];
-      teams[1].spymasterID = '1';
+      teams[1].spymasterIDs = ['1'];
     }
     const cards = ctx.random
       .Shuffle(fullCustomization.words)
@@ -37,7 +39,9 @@ const GameConfig: Game<IG> = {
     return {
       teams,
       cards,
+      hostPlayerID: customData?.hostPlayerID || '0',
       lastSelectedCardIndex,
+      lastSelectedCardTeamColor: null,
     };
   },
 
@@ -45,7 +49,7 @@ const GameConfig: Game<IG> = {
     if (ctx.gameover) return G;
     if (playerID === null) return G;
     if (ctx.phase !== Phases.guess) return G;
-    if (playerID == G.teams[0].spymasterID || playerID == G.teams[1].spymasterID) return G;
+    if (isPlayerSpymaster(G, playerID)) return G;
 
     const { cards } = G;
     return {
@@ -66,7 +70,8 @@ const GameConfig: Game<IG> = {
       start: true,
       moves: {
         switchTeam,
-        makeSpymaster,
+        toggleSpymaster,
+        toggleRepresentative,
         startGame,
       },
 
@@ -84,7 +89,7 @@ const GameConfig: Game<IG> = {
         order: {
           first: () => 0,
           next: () => 0,
-          playOrder: (G: IG, ctx: Ctx): string[] => getActivePlayersWithoutSpymaster(getCurrentTeam(G), ctx),
+          playOrder: (G: IG, ctx: Ctx): string[] => getActiveGuessers(getCurrentTeam(G), ctx),
         },
       },
       moves: {
@@ -107,9 +112,9 @@ const GameConfig: Game<IG> = {
       const blue = G.cards.filter((card) => card.color === CardColor.blue && !card.revealed);
       const red = G.cards.filter((card) => card.color === CardColor.red && !card.revealed);
 
-      if (assassin.revealed) {
+      if (assassin.revealed && G.lastSelectedCardTeamColor) {
         return {
-          winner: getOtherTeam(G, getPlayerTeam(G, ctx.currentPlayer)),
+          winner: getOtherTeam(G, getTeamByColor(G, G.lastSelectedCardTeamColor)),
         };
       }
       if (blue.length === 0)

@@ -29,6 +29,7 @@ describe('Game', () => {
       playerMemberships: [
         {
           __typename: 'MatchMembership' as const,
+          isCreator: true,
           user: { nickname: 'fooPlayer', id: 0, __typename: 'User' as const },
         },
       ],

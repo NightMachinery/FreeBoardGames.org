@@ -15,6 +15,7 @@ export interface GetMatch_match_playerMemberships_user {
 
 export interface GetMatch_match_playerMemberships {
   __typename: "MatchMembership";
+  isCreator: boolean;
   user: GetMatch_match_playerMemberships_user;
 }
 

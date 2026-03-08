@@ -72,9 +72,18 @@ export class MatchService {
       if (entity.nextRoom) {
         return entity.nextRoom.id;
       }
+      const creatorMembership = entity.room.userMemberships.find(
+        (roomMembership) => roomMembership.isCreator,
+      );
+      if (!creatorMembership) {
+        throw new HttpException(
+          'Match room is missing a creator',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
       const room = await this.roomsService.newRoom(
         { ...roomEntityToRoom(entity.room), isPublic: false },
-        userId,
+        creatorMembership.user.id,
         queryRunner,
       );
       entity.nextRoom = room;
@@ -114,11 +123,21 @@ export class MatchService {
     shuffleUsers?: boolean,
     setupData?: string
   ): Promise<string> {
+    const memberships = room.userMemberships.slice();
+    if (shuffleUsers) {
+      shuffleArray(memberships);
+    } else {
+      memberships.sort((m1, m2) => m1.position - m2.position);
+    }
+    const creatorPlayerID = memberships.findIndex((membership) => membership.isCreator);
+    const mergedSetupData = mergeSetupData(setupData, {
+      hostPlayerID: creatorPlayerID >= 0 ? `${creatorPlayerID}` : '0',
+    });
     const bgioServerUrl = getBgioServerUrl();
     const bgioMatchId = await this.createBgioMatch(
       bgioServerUrl.internal,
       room,
-      setupData,
+      mergedSetupData,
     );
     const id = shortid.generate();
     const newMatch = new MatchEntity();
@@ -130,12 +149,6 @@ export class MatchService {
     newMatch.bgioMatchId = bgioMatchId;
     await queryRunner.manager.insert(MatchEntity, newMatch);
     let index = 0;
-    const memberships = room.userMemberships.slice();
-    if (shuffleUsers) {
-      shuffleArray(memberships);
-    } else {
-      memberships.sort((m1, m2) => m1.position - m2.position);
-    }
     for (const userMembership of memberships) {
       // These requests to BGIO server need to be in serial b/c of race condition inside it.
       const matchMembership = await this.roomToMatchMembership(
@@ -204,4 +217,9 @@ function shuffleArray(array: any[]) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
+}
+
+function mergeSetupData(rawSetupData: string | undefined, extraSetupData: Record<string, unknown>): string | undefined {
+  const parsedSetupData = rawSetupData ? JSON.parse(rawSetupData) : {};
+  return JSON.stringify({ ...parsedSetupData, ...extraSetupData });
 }

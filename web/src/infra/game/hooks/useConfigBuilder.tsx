@@ -71,12 +71,21 @@ export function useConfigBuilder() {
       }
     };
 
+    const buildHostPlayerID = () => {
+      if (mode !== GameMode.OnlineFriend) {
+        return '0';
+      }
+      const hostMembershipIndex = match.playerMemberships.findIndex((membership) => membership.isCreator);
+      return hostMembershipIndex >= 0 ? `${hostMembershipIndex}` : '0';
+    };
+
     const buildGameArgs = (): GameArgs => {
       return {
         gameCode: gameCode,
         mode: mode,
         credentials: credentials,
         matchCode: matchCode,
+        hostPlayerID: buildHostPlayerID(),
         players: buildPlayers(),
       };
     };

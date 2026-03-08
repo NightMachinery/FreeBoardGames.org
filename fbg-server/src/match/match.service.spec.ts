@@ -78,8 +78,8 @@ describe('MatchService', () => {
       bgioSecret: 'aliceSecret',
       bgioPlayerId: '1',
       playerMemberships: [
-        { user: { id: bobId, nickname: 'bob' } },
-        { user: { id: aliceId, nickname: 'alice' } },
+        { isCreator: false, user: { id: bobId, nickname: 'bob' } },
+        { isCreator: false, user: { id: aliceId, nickname: 'alice' } },
       ],
     });
   });
@@ -119,6 +119,44 @@ describe('MatchService', () => {
       isPublic: false,
     });
     expect(sameRoomId).toEqual(newRoomId);
+  });
+
+  it('should preserve the original creator in the play-again room even if another player clicks first', async () => {
+    const promiseMock = jest
+      .fn()
+      .mockReturnValueOnce(Promise.resolve({ data: { matchID: 'bgioGameId' } }))
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '1stSecret' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '2ndSecret' } }),
+      )
+      .mockReturnValueOnce(Promise.resolve({ data: { matchID: 'bgioGameId-2' } }))
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: 'creatorSecret' } }),
+      );
+    jest
+      .spyOn(httpService, 'post')
+      .mockReturnValue({ toPromise: promiseMock } as any);
+    const bobId = await usersService.newUser({ nickname: 'bob' });
+    const room = await roomsService.newRoom(
+      {
+        capacity: 2,
+        gameCode: 'checkers',
+        isPublic: false,
+      },
+      bobId,
+    );
+    const aliceId = await usersService.newUser({ nickname: 'alice' });
+    await roomsService.joinRoom(aliceId, room.id);
+    const matchId = await service.startMatch(room.id, bobId);
+
+    const nextRoomId = await service.getNextRoom(matchId, aliceId);
+    const nextRoom = await roomsService.getRoomEntity(nextRoomId);
+
+    expect(nextRoom.userMemberships).toHaveLength(1);
+    expect(nextRoom.userMemberships[0].user.id).toEqual(bobId);
+    expect(nextRoom.userMemberships[0].isCreator).toEqual(true);
   });
 
   it('should fail to get next room if user is not in the match', async () => {

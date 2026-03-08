@@ -8,6 +8,7 @@ export interface IGameArgs {
   gameCode: string;
   mode: GameMode;
   matchCode?: string;
+  hostPlayerID?: string;
   players?: IPlayerInRoom[];
 }
 

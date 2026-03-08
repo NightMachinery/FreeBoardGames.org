@@ -79,6 +79,7 @@ export class LobbyService {
               bgioSecret
               bgioPlayerId
               playerMemberships {
+                isCreator
                 user {
                   id
                   nickname

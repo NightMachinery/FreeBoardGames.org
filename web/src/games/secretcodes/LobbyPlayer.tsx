@@ -1,6 +1,6 @@
 import * as React from 'react';
 import css from './Lobby.module.css';
-import { getPlayerTeam, isPlayerSpymaster } from './util';
+import { getPlayerTeam, isPlayerRepresentative, isPlayerSpymaster } from './util';
 import { IG } from './definitions';
 import { useCurrentGameTranslation } from 'infra/i18n';
 
@@ -15,25 +15,36 @@ interface ILobbyPlayerProps {
 export function LobbyPlayer({ G, moves, playerID, players, isHost }: ILobbyPlayerProps) {
   const { translate } = useCurrentGameTranslation();
 
-  const makeSpymaster = (playerID: string) => {
-    moves.makeSpymaster(playerID);
+  const toggleSpymaster = (playerID: string) => {
+    moves.toggleSpymaster(playerID);
+  };
+
+  const toggleRepresentative = (playerID: string) => {
+    moves.toggleRepresentative(playerID);
   };
 
   const isPlayerInTeam = (): boolean => {
     return getPlayerTeam(G, playerID) !== undefined;
   };
 
+  const isSpymaster = isPlayerSpymaster(G, playerID);
+  const isRepresentative = isPlayerRepresentative(G, playerID);
+
   return (
     <li>
-      {isPlayerSpymaster(G, playerID) ? <span>{translate('s')}</span> : ''}
+      {isSpymaster ? <span>{translate('s')}</span> : null}
+      {isRepresentative ? <span>{translate('r')}</span> : null}
       {players[playerID].name}
-      {!isPlayerSpymaster(G, playerID) && isHost && isPlayerInTeam() ? (
-        <button className={[css.btn, css.btnSpymaster].join(' ')} onClick={() => makeSpymaster(playerID)}>
-          {translate('make_spymaster')}
-        </button>
-      ) : (
-        ''
-      )}
+      {isHost && isPlayerInTeam() ? (
+        <React.Fragment>
+          <button className={[css.btn, css.btnSpymaster].join(' ')} onClick={() => toggleSpymaster(playerID)}>
+            {translate(isSpymaster ? 'remove_spymaster' : 'make_spymaster')}
+          </button>
+          <button className={[css.btn, css.btnSpymaster].join(' ')} onClick={() => toggleRepresentative(playerID)}>
+            {translate(isRepresentative ? 'remove_representative' : 'make_representative')}
+          </button>
+        </React.Fragment>
+      ) : null}
     </li>
   );
 }

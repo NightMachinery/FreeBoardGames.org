@@ -41,6 +41,18 @@
   margin-bottom: 0.4em;
 }
 
+.btn {
+  margin-left: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.btnSpymaster {
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
 .teamBlue {
   background-color: #247BA0;
 }

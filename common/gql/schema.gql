@@ -36,6 +36,7 @@ type Lobby {
 }
 
 type MatchMembership {
+  isCreator: Boolean!
   user: User!
 }
 
