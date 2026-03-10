@@ -1,7 +1,6 @@
 import * as Sentry from '@sentry/browser';
 import { GetMatch_match } from 'gqlTypes/GetMatch';
 import MessagePage from 'infra/common/components/alert/MessagePage';
-import { withNickNameRequired } from 'infra/common/components/auth/hocs/withNickNameRequired';
 import { LobbyService } from 'infra/common/services/LobbyService';
 import Game from 'infra/game/Game';
 import { NextRouter, withRouter, withTranslation, WithTranslation } from 'infra/i18n';
@@ -63,7 +62,6 @@ const mapStateToProps = function (state) {
 };
 
 const enhance = compose<MatchInnerProps, MatchOutterProps>(
-  withNickNameRequired,
   withRouter,
   withTranslation('Match'),
   connect(mapStateToProps),

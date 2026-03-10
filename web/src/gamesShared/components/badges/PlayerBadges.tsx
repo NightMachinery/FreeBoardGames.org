@@ -10,7 +10,7 @@ interface IPlayerBadgesProps {
   scores?: IScore[];
   players: IPlayerInRoom[];
   prefixes?: string[];
-  playerID: string;
+  playerID?: string | null;
   colors?: string[];
   ctx: Ctx;
 }

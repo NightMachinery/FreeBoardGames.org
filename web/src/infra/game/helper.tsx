@@ -3,7 +3,7 @@ import { GameMode } from 'gamesShared/definitions/mode';
 import { TBgioPlayerId } from 'infra/types';
 
 interface Match {
-  bgioPlayerId: TBgioPlayerId;
+  bgioPlayerId: TBgioPlayerId | null;
 }
 
 export function validateMode(gameDef: IGameDef, mode: GameMode) {
@@ -13,7 +13,7 @@ export function validateMode(gameDef: IGameDef, mode: GameMode) {
   };
 }
 
-export function getPlayerID(match: Match, mode: GameMode): TBgioPlayerId | undefined {
-  if (match) return match.bgioPlayerId;
+export function getPlayerID(match: Match, mode: GameMode): TBgioPlayerId | null | undefined {
+  if (match) return match.bgioPlayerId ?? null;
   if (mode === GameMode.AI) return '1' as TBgioPlayerId;
 }

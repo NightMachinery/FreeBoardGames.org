@@ -5,9 +5,9 @@ import { TGameCode, TBgioMatchId, TBgioSecret, TBgioPlayerId, TBgioServerUrl } f
 export interface Match extends GetMatch_match {
   gameCode: TGameCode;
   bgioMatchId: TBgioMatchId;
-  bgioPlayerId: TBgioPlayerId;
+  bgioPlayerId: TBgioPlayerId | null;
   bgioServerUrl: TBgioServerUrl;
-  bgioSecret: TBgioSecret;
+  bgioSecret: TBgioSecret | null;
 }
 
 export type ClientConfig = Parameters<typeof Client>[0];

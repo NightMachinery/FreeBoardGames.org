@@ -13,7 +13,7 @@ const notifications = {};
 
 type UseNotificationsHandlerNamedArgs = {
   matchID: string;
-  playerID: string;
+  playerID?: string | null;
   mode: GameMode;
   game: IGameDef;
 };
@@ -64,9 +64,15 @@ class Notifications {
   private muted: boolean;
   private turn: number;
 
-  constructor(ctx: Ctx, game: any, private matchID: string, playerID: string, private mode: GameMode) {
+  constructor(
+    ctx: Ctx,
+    game: any,
+    private matchID: string,
+    playerID: string | null | undefined,
+    private mode: GameMode,
+  ) {
     this.gameName = game.name;
-    this.isYourTurn = isPlayersTurn(playerID, ctx);
+    this.isYourTurn = playerID != null && isPlayersTurn(playerID, ctx);
     this.muted = staticContext.muted;
     this.turn = ctx.turn;
   }

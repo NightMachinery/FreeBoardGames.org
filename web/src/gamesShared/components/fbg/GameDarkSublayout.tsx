@@ -144,7 +144,12 @@ export class GameDarkSublayoutInternal extends React.Component<IGameDarkSublayou
     const matchId = this.props.router.query.matchId as string;
     return (
       <div style={{ float: 'right' }}>
-        <Chat channelType="match" channelId={matchId} dispatch={this.props.dispatch} />
+        <Chat
+          channelType="match"
+          channelId={matchId}
+          dispatch={this.props.dispatch}
+          canSend={Boolean(this.props.gameArgs.credentials)}
+        />
       </div>
     );
   }

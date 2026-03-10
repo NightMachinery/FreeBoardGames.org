@@ -25,6 +25,7 @@ export interface ChatOutterProps {
   channelType: 'room' | 'match';
   channelId: string;
   dispatch: Dispatch;
+  canSend?: boolean;
 }
 
 export interface ChatState {
@@ -135,7 +136,7 @@ class ChatInternal extends React.Component<ChatInnerProps & ChatOutterProps, Cha
         <div style={{ flex: '1', overflowY: 'auto' }} ref={this.messagesRef}>
           <ChatMessageHistory messages={messages} />
         </div>
-        <ChatInput sendMessage={this._sendMessage} className={className} />
+        {this.props.canSend === false ? null : <ChatInput sendMessage={this._sendMessage} className={className} />}
       </div>
     );
   }
@@ -186,6 +187,9 @@ class ChatInternal extends React.Component<ChatInnerProps & ChatOutterProps, Cha
   }
 
   _sendMessage = (msg: string) => {
+    if (this.props.canSend === false) {
+      return;
+    }
     // TODO: Refactor this out of lobby service.
     LobbyService.sendMessage(this.props.dispatch, this.props.channelType, this.props.channelId, msg);
   };

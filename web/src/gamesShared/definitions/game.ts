@@ -10,6 +10,7 @@ export interface IGameArgs {
   matchCode?: string;
   hostPlayerID?: string;
   players?: IPlayerInRoom[];
+  credentials?: string | null;
 }
 
 export interface IGameConfig {

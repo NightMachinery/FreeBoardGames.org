@@ -14,7 +14,7 @@ export function matchMembershipEntityToMatchMembership(
   };
 }
 
-export function matchEntityToMatch(entity: MatchEntity, userId: number): Match {
+export function matchEntityToMatch(entity: MatchEntity, userId?: number): Match {
   const memberships = [...entity.playerMemberships];
   memberships.sort((a, b) => a.bgioPlayerId - b.bgioPlayerId);
   const creatorUserId = entity.room?.userMemberships?.find((membership) => membership.isCreator)?.user.id;

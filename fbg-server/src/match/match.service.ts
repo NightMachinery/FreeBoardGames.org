@@ -27,8 +27,8 @@ export class MatchService {
     private httpService: HttpService,
   ) {}
 
-  /** Gets match match information for a given user. */
-  async getMatch(matchId: string, userId: number): Promise<Match> {
+  /** Gets match information for a given user, or spectator-safe information when userId is omitted. */
+  async getMatch(matchId: string, userId?: number): Promise<Match> {
     const entity = await this.getMatchEntity(matchId);
     return matchEntityToMatch(entity, userId);
   }

@@ -6,19 +6,26 @@ import { GameMode } from 'gamesShared/definitions/mode';
 import { CardColor, TeamColor } from './definitions';
 import { chooseCard } from './util';
 
-function render(client: any, state: any, gameOver = false, moves = client.moves) {
+function render(
+  client: any,
+  state: any,
+  gameOver = false,
+  moves = client.moves,
+  playerID: string | null = '0',
+  mode: GameMode = GameMode.LocalFriend,
+) {
   return Enzyme.shallow(
     <PlayBoard
       G={state.G}
       ctx={state.ctx}
       events={state.events}
       moves={moves}
-      playerID={'0'}
+      playerID={playerID}
       isActive={true}
       isHost={false}
       gameArgs={{
         gameCode: 'secretcodes',
-        mode: GameMode.LocalFriend,
+        mode,
         players: [
           { playerID: 0, name: 'foo' },
           { playerID: 1, name: 'bar' },
@@ -136,5 +143,29 @@ describe('Secretcodes UI', () => {
     wrapper.find('.card').at(0).simulate('click');
 
     expect(moves.chooseCard).not.toHaveBeenCalled();
+  });
+
+  it('should hide the spymaster toggle for spectators', () => {
+    state.ctx = { ...state.ctx, currentPlayer: '0' };
+
+    const wrapper = render(client, state, false, client.moves, null, GameMode.OnlineFriend);
+
+    expect(wrapper.find('.selectTeamBtn').exists()).toBeFalsy();
+  });
+
+  it('should not allow spectators to choose cards or pass', () => {
+    state.ctx = { ...state.ctx, currentPlayer: '0' };
+    const moves = {
+      ...client.moves,
+      chooseCard: jest.fn(),
+      pass: jest.fn(),
+    };
+
+    const wrapper = render(client, state, false, moves, null, GameMode.OnlineFriend);
+    wrapper.find('.card').at(0).simulate('click');
+
+    expect(moves.chooseCard).not.toHaveBeenCalled();
+    expect(wrapper.find('.playActionBtn').exists()).toBeFalsy();
+    expect(moves.pass).not.toHaveBeenCalled();
   });
 });

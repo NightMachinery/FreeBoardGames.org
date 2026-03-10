@@ -12,7 +12,7 @@ import DEFAULT_ENHANCERS from '../../common/enhancers';
 import { gameBoardWrapper } from '../GameBoardWrapper';
 import { ClientConfig, Match } from '../types';
 
-type GameArgs = IGameArgs & { credentials?: TBgioSecret };
+type GameArgs = IGameArgs & { credentials?: TBgioSecret | null };
 
 export function useConfigBuilder() {
   const [t] = useTranslation('Game');
@@ -20,7 +20,7 @@ export function useConfigBuilder() {
   return (
     aiConfig: IAIConfig,
     config: IGameConfig,
-    credentials: TBgioSecret,
+    credentials: TBgioSecret | null,
     gameCode: TGameCode,
     match: Match,
     matchCode: TBgioMatchId,

@@ -149,7 +149,10 @@ export function getTeamByColor(G: IG, teamColor: TeamColor): Team | undefined {
   return G.teams.find((t) => t.color === teamColor);
 }
 
-export function getPlayerTeam(G: IG, playerID: string): Team | undefined {
+export function getPlayerTeam(G: IG, playerID: string | null | undefined): Team | undefined {
+  if (playerID == null) {
+    return;
+  }
   return G.teams.find((team) => team.playersID.includes(playerID));
 }
 
@@ -174,19 +177,28 @@ export function getCardColorByTeamColor(color: TeamColor): CardColor {
   return colors[color];
 }
 
-export function isPlayerSpymaster(G: IG, playerID: string): boolean {
+export function isPlayerSpymaster(G: IG, playerID: string | null | undefined): boolean {
+  if (playerID == null) {
+    return false;
+  }
   const team = getPlayerTeam(G, playerID);
 
   return team?.spymasterIDs.includes(playerID) || false;
 }
 
-export function isPlayerRepresentative(G: IG, playerID: string): boolean {
+export function isPlayerRepresentative(G: IG, playerID: string | null | undefined): boolean {
+  if (playerID == null) {
+    return false;
+  }
   const team = getPlayerTeam(G, playerID);
 
   return team?.representativeIDs.includes(playerID) || false;
 }
 
-export function canPlayerGuessCurrentTeam(G: IG, ctx: Ctx, playerID: string): boolean {
+export function canPlayerGuessCurrentTeam(G: IG, ctx: Ctx, playerID: string | null | undefined): boolean {
+  if (playerID == null) {
+    return false;
+  }
   const currentTeam = getCurrentTeam(G);
   const playerTeam = getPlayerTeam(G, playerID);
 

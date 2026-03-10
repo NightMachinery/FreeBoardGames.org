@@ -15,7 +15,7 @@ interface IBoardProps {
   moves: any;
   step?: any;
   events: any;
-  playerID: string;
+  playerID: string | null;
   gameArgs?: IGameArgs;
   isActive: boolean;
   isMultiplayer: boolean;

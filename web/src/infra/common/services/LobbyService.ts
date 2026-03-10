@@ -10,6 +10,8 @@ import { NewUser, NewUserVariables } from 'gqlTypes/NewUser';
 import { NewRoom, NewRoomVariables } from 'gqlTypes/NewRoom';
 import { SendMessage, SendMessageVariables } from 'gqlTypes/SendMessage';
 import { GetMatch, GetMatchVariables } from 'gqlTypes/GetMatch';
+import { GetPublicMatch, GetPublicMatchVariables } from 'gqlTypes/GetPublicMatch';
+import { GetPublicRoom, GetPublicRoomVariables } from 'gqlTypes/GetPublicRoom';
 import { GetLobby } from 'gqlTypes/GetLobby';
 import { StartMatch, StartMatchVariables } from 'gqlTypes/StartMatch';
 import { NextRoom, NextRoomVariables } from 'gqlTypes/NextRoom';
@@ -28,8 +30,12 @@ const httpLink = createHttpLink({
 });
 
 export class LobbyService {
+  private static isUnauthorizedGqlError(e: ApolloError) {
+    return e.graphQLErrors.find((error) => error.extensions?.exception?.status === 401);
+  }
+
   private static catchUnauthorizedGql = (dispatch: Dispatch<SyncUserAction>) => (e: ApolloError) => {
-    if (e.graphQLErrors.find((error) => error.extensions.exception.status === 401)) {
+    if (LobbyService.isUnauthorizedGqlError(e)) {
       // invalidate the user's auth and adjust our store accordingly:
       LobbyService.invalidateUserAuth();
       dispatch(LobbyService.getSyncUserAction());
@@ -68,29 +74,85 @@ export class LobbyService {
 
   public static async getMatch(dispatch: Dispatch<SyncUserAction>, matchId: string): Promise<GetMatch> {
     const client = this.getClient();
-    const result = await client
-      .query<GetMatch, GetMatchVariables>({
-        query: gql`
-          query GetMatch($matchId: String!) {
-            match(id: $matchId) {
-              gameCode
-              bgioServerUrl
-              bgioMatchId
-              bgioSecret
-              bgioPlayerId
-              playerMemberships {
-                isCreator
-                user {
-                  id
-                  nickname
+    if (this.getUserToken()) {
+      try {
+        const result = await client.query<GetMatch, GetMatchVariables>({
+          query: gql`
+            query GetMatch($matchId: String!) {
+              match(id: $matchId) {
+                gameCode
+                bgioServerUrl
+                bgioMatchId
+                bgioSecret
+                bgioPlayerId
+                playerMemberships {
+                  isCreator
+                  user {
+                    id
+                    nickname
+                  }
                 }
               }
             }
+          `,
+          variables: { matchId },
+        });
+        return result.data;
+      } catch (e) {
+        if (e instanceof ApolloError && LobbyService.isUnauthorizedGqlError(e)) {
+          LobbyService.invalidateUserAuth();
+          dispatch(LobbyService.getSyncUserAction());
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    const result = await client.query<GetPublicMatch, GetPublicMatchVariables>({
+      query: gql`
+        query GetPublicMatch($matchId: String!) {
+          publicMatch(id: $matchId) {
+            gameCode
+            bgioServerUrl
+            bgioMatchId
+            bgioSecret
+            bgioPlayerId
+            playerMemberships {
+              isCreator
+              user {
+                id
+                nickname
+              }
+            }
           }
-        `,
-        variables: { matchId },
-      })
-      .catch(this.catchUnauthorizedGql(dispatch));
+        }
+      `,
+      variables: { matchId },
+    });
+    return { match: result.data.publicMatch };
+  }
+
+  public static async getPublicRoom(roomId: string): Promise<GetPublicRoom> {
+    const client = this.getClient();
+    const result = await client.query<GetPublicRoom, GetPublicRoomVariables>({
+      query: gql`
+        query GetPublicRoom($roomId: String!) {
+          publicRoom(id: $roomId) {
+            gameCode
+            matchId
+            userMemberships {
+              isCreator
+              position
+              user {
+                id
+                nickname
+              }
+            }
+          }
+        }
+      `,
+      variables: { roomId },
+    });
     return result.data;
   }
 

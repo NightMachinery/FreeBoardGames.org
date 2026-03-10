@@ -84,6 +84,35 @@ describe('MatchService', () => {
     });
   });
 
+  it('should get spectator match without player credentials', async () => {
+    const matchEntity = new MatchEntity();
+    matchEntity.id = 'spectatorMatch';
+    matchEntity.gameCode = 'secretcodes';
+    matchEntity.bgioServerInternalUrl = 'fooInternalUrl';
+    matchEntity.bgioServerExternalUrl = 'fooExternalUrl';
+    matchEntity.bgioMatchId = 'fooMatchId';
+    await matchRepository.save(matchEntity);
+    const aliceId = await usersService.newUser({ nickname: 'spectatoralice' });
+    const alice = await usersService.getUserEntity(aliceId);
+    const aliceMatchMembership = new MatchMembershipEntity();
+    aliceMatchMembership.user = alice;
+    aliceMatchMembership.match = matchEntity;
+    aliceMatchMembership.bgioSecret = 'aliceSecret';
+    aliceMatchMembership.bgioPlayerId = 0;
+    await matchMembershipRepository.save(aliceMatchMembership);
+
+    const match = await service.getMatch('spectatorMatch');
+
+    expect(match).toEqual({
+      gameCode: 'secretcodes',
+        bgioServerUrl: 'fooExternalUrl',
+        bgioMatchId: 'fooMatchId',
+        playerMemberships: [
+        { isCreator: false, user: { id: aliceId, nickname: 'spectatoralice' } },
+      ],
+    });
+  });
+
   it('should get next room succesfully', async () => {
     const promiseMock = jest
       .fn()

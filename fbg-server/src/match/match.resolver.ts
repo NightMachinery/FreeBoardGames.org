@@ -18,6 +18,13 @@ export class MatchResolver {
     return await this.matchService.getMatch(matchId, currentUser.id);
   }
 
+  @Query(() => Match)
+  async publicMatch(
+    @Args({ name: 'id', type: () => String }) matchId: string,
+  ): Promise<Match> {
+    return await this.matchService.getMatch(matchId);
+  }
+
   @Mutation(() => String)
   @UseGuards(GqlAuthGuard)
   async nextRoom(

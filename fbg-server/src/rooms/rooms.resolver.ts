@@ -1,4 +1,4 @@
-import { Resolver, Mutation, Args, Subscription, Int } from '@nestjs/graphql';
+import { Resolver, Mutation, Args, Subscription, Int, Query } from '@nestjs/graphql';
 import { User } from '../users/gql/User.gql';
 import { Room } from './gql/Room.gql';
 import { NewRoomInput } from './gql/NewRoomInput.gql';
@@ -35,6 +35,14 @@ export class RoomsResolver {
     const roomEntity = await this.roomsService.joinRoom(userId, roomId);
     const room = roomEntityToRoom(roomEntity);
     return { ...room, userId };
+  }
+
+  @Query(() => Room)
+  async publicRoom(
+    @Args({ name: 'id', type: () => String }) roomId: string,
+  ): Promise<Room> {
+    const roomEntity = await this.roomsService.getRoomEntity(roomId);
+    return roomEntityToRoom(roomEntity);
   }
 
   @Mutation(() => Boolean)

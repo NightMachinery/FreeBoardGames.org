@@ -9,7 +9,7 @@ import { JoinRoom_joinRoom, JoinRoom_joinRoom_userMemberships } from 'gqlTypes/J
 import AlertLayer from 'infra/common/components/alert/AlertLayer';
 import { LoadingMessage } from 'infra/common/components/alert/LoadingMessage';
 import MessagePage from 'infra/common/components/alert/MessagePage';
-import { withNickNameRequired } from 'infra/common/components/auth/hocs/withNickNameRequired';
+import NicknameRequired from 'infra/common/components/auth/NicknameRequired';
 import { NicknamePrompt } from 'infra/common/components/auth/NicknamePrompt';
 import FreeBoardGamesBar from 'infra/common/components/base/FreeBoardGamesBar';
 import { GameCard } from 'infra/common/components/game/GameCard';
@@ -70,6 +70,7 @@ interface State {
   warning: string;
   editingName: boolean;
   changingGame: boolean;
+  requiresNickname: boolean;
 }
 
 class Room extends React.Component<InnerProps & OutterProps, State> {
@@ -80,10 +81,11 @@ class Room extends React.Component<InnerProps & OutterProps, State> {
     partialLoading: false,
     editingName: false,
     changingGame: false,
+    requiresNickname: false,
   };
 
   componentDidMount() {
-    this.joinRoom();
+    this.loadRoom();
   }
 
   render() {
@@ -95,6 +97,10 @@ class Room extends React.Component<InnerProps & OutterProps, State> {
 
     if (this.state.loading) {
       return <LoadingMessage />;
+    }
+
+    if (this.state.requiresNickname) {
+      return <NicknameRequired onSuccess={this._handleNicknameReady}>{null}</NicknameRequired>;
     }
 
     return (
@@ -244,7 +250,15 @@ class Room extends React.Component<InnerProps & OutterProps, State> {
     );
   }
 
-  joinRoom = () => {
+  loadRoom = () => {
+    if (LobbyService.getUserToken()) {
+      this.joinRoom(true);
+    } else {
+      this.inspectRoom();
+    }
+  };
+
+  joinRoom = (fallbackToAnonymousLookup: boolean = false) => {
     const { t } = this.props;
     LobbyService.joinRoom(this.props.dispatch, this._roomId()).then(
       async (response) => {
@@ -252,8 +266,33 @@ class Room extends React.Component<InnerProps & OutterProps, State> {
         if (roomMetadata.matchId) {
           this.redirectToMatch(response.joinRoom.matchId);
         } else {
-          this.setState({ loading: false, roomMetadata: roomMetadata, userId: roomMetadata.userId });
+          this.setState({
+            loading: false,
+            requiresNickname: false,
+            roomMetadata: roomMetadata,
+            userId: roomMetadata.userId,
+          });
         }
+      },
+      () => {
+        if (fallbackToAnonymousLookup) {
+          this.inspectRoom();
+        } else {
+          this.setState({ error: t('failed_to_fetch_room_metadata') });
+        }
+      },
+    );
+  };
+
+  inspectRoom = () => {
+    const { t } = this.props;
+    LobbyService.getPublicRoom(this._roomId()).then(
+      ({ publicRoom }) => {
+        if (publicRoom.matchId) {
+          this.redirectToMatch(publicRoom.matchId);
+          return;
+        }
+        this.setState({ loading: false, requiresNickname: true });
       },
       () => {
         this.setState({ error: t('failed_to_fetch_room_metadata') });
@@ -418,12 +457,17 @@ class Room extends React.Component<InnerProps & OutterProps, State> {
   };
 
   _tryAgain = () => {
-    this.setState({ error: '' });
-    this.joinRoom();
+    this.setState({ error: '', loading: true, requiresNickname: false });
+    this.loadRoom();
   };
 
   _dismissWarning = () => {
     this.setState({ warning: '' });
+  };
+
+  _handleNicknameReady = () => {
+    this.setState({ loading: true, requiresNickname: false });
+    this.joinRoom();
   };
 }
 
@@ -438,7 +482,6 @@ const enhance = compose<InnerProps, OutterProps>(
   withRouter,
   withTranslation('Room'),
   withSettingsService,
-  withNickNameRequired,
   connect(mapStateToProps),
 );
 

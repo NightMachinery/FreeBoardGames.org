@@ -16,16 +16,7 @@ Match.getInitialProps = async ({ query }) => {
   const matchId = query.matchId as string;
   return {
     matchId,
-    namespacesRequired: [
-      'Match',
-      'Chat',
-      'LoadingMessage',
-      'MessagePage',
-      'NicknameRequired',
-      'NicknamePrompt',
-      'Game',
-      'ConnectionLost',
-    ],
+    namespacesRequired: ['Match', 'Chat', 'LoadingMessage', 'MessagePage', 'Game', 'ConnectionLost'],
   };
 };
 

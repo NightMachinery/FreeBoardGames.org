@@ -45,7 +45,7 @@ export const Game: VFC<IGameProps> = (props) => {
   const matchCode = props.match?.bgioMatchId;
   const playerID = getPlayerID(props.match, mode);
   const serverUrl = props.match?.bgioServerUrl;
-  const credentials = mode === GameMode.OnlineFriend ? props.match?.bgioSecret : null;
+  const credentials = mode === GameMode.OnlineFriend ? props.match?.bgioSecret ?? null : null;
 
   const config = buildConfig(
     aiConfig,

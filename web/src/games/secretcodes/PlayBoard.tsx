@@ -23,7 +23,7 @@ interface IPlayBoardOutterProps {
   ctx: Ctx;
   moves: any;
   events: any;
-  playerID: string;
+  playerID: string | null;
   gameArgs?: IGameArgs;
   isActive: boolean;
   isHost: boolean;
@@ -47,7 +47,7 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     return getCurrentTeam(this.props.G);
   }
 
-  _playerID(): string {
+  _playerID(): string | null {
     if (isLocalGame(this.props.gameArgs)) {
       return this.props.ctx.currentPlayer;
     } else {

@@ -2,7 +2,7 @@ import { Client } from 'boardgame.io/client';
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { SecretcodesGame } from './game';
 import { Ctx } from 'boardgame.io';
-import { TeamColor } from './definitions';
+import { CardColor, Phases, TeamColor } from './definitions';
 import { chooseCard, pass, switchTeam, toggleRepresentative, toggleSpymaster } from './util';
 
 describe('secret codes rules', () => {
@@ -170,5 +170,31 @@ describe('secret codes rules', () => {
 
     expect(state.G.teams[0].representativeIDs).toEqual([]);
     expect(state.G.teams[0].spymasterIDs).toEqual(['0', '1']);
+  });
+
+  it('should hide unrevealed card colors from spectators during active play', () => {
+    const client = Client({
+      game: SecretcodesGame,
+    }) as any;
+    const state = client.store.getState();
+    state.G = {
+      ...state.G,
+      currentTeamIndex: 0,
+      cards: state.G.cards.map((card, index) => ({
+        ...card,
+        color: index === 0 ? CardColor.blue : CardColor.red,
+        revealed: index === 0,
+      })),
+      teams: [
+        { color: TeamColor.Blue, playersID: ['0'], spymasterIDs: ['0'], representativeIDs: [] },
+        { color: TeamColor.Red, playersID: ['1'], spymasterIDs: ['1'], representativeIDs: [] },
+      ],
+    };
+    state.ctx = { ...state.ctx, phase: Phases.guess };
+
+    const spectatorView = SecretcodesGame.playerView(state.G, state.ctx, null);
+
+    expect(spectatorView.cards[0].color).toEqual(CardColor.blue);
+    expect(spectatorView.cards[1].color).toBeUndefined();
   });
 });

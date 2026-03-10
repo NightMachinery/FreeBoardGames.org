@@ -63,6 +63,8 @@ type Query {
   user: User!
   lobby: Lobby!
   match(id: String!): Match!
+  publicMatch(id: String!): Match!
+  publicRoom(id: String!): Room!
 }
 
 type Mutation {

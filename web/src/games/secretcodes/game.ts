@@ -45,9 +45,8 @@ const GameConfig: Game<IG> = {
     };
   },
 
-  playerView: (G: IG, ctx: Ctx, playerID: string): any => {
+  playerView: (G: IG, ctx: Ctx, playerID: string | null): any => {
     if (ctx.gameover) return G;
-    if (playerID === null) return G;
     if (ctx.phase !== Phases.guess) return G;
     if (isPlayerSpymaster(G, playerID)) return G;
 

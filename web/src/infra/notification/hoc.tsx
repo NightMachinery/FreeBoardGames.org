@@ -6,7 +6,7 @@ import React, { ComponentType, useEffect } from 'react';
 import { useNotificationsHandler } from './config';
 
 type Props = {
-  playerID: string;
+  playerID?: string | null;
   matchID: string;
   mode: GameMode;
   game: IGameDef;
