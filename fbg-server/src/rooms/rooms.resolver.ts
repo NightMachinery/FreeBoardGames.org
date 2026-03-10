@@ -6,12 +6,14 @@ import { UpdateRoomInput } from './gql/UpdateRoomInput.gql';
 import { NewRoom } from './gql/NewRoom.gql';
 import { RoomsService } from './rooms.service';
 import { CurrentUser, GqlAuthGuard } from '../internal/auth/GqlAuthGuard';
-import { UseGuards, Inject } from '@nestjs/common';
+import { UseGuards, Inject, UseFilters } from '@nestjs/common';
 import { roomEntityToRoom } from './RoomUtil';
 import { PubSub } from 'graphql-subscriptions';
 import { FBG_PUB_SUB } from '../internal/FbgPubSubModule';
+import { GraphQLHttpExceptionFilter } from '../internal/gql/GraphQLHttpExceptionFilter';
 
 @Resolver(() => Room)
+@UseFilters(GraphQLHttpExceptionFilter)
 export class RoomsResolver {
   constructor(private roomsService: RoomsService, @Inject(FBG_PUB_SUB) private pubSub: PubSub) {}
 

@@ -1,11 +1,13 @@
 import { Resolver, Mutation, Args, Query } from '@nestjs/graphql';
 import { MatchService } from './match.service';
 import { CurrentUser, GqlAuthGuard } from '../internal/auth/GqlAuthGuard';
-import { UseGuards } from '@nestjs/common';
+import { UseFilters, UseGuards } from '@nestjs/common';
 import { Match } from './gql/Match.gql';
 import { User } from '../users/gql/User.gql';
+import { GraphQLHttpExceptionFilter } from '../internal/gql/GraphQLHttpExceptionFilter';
 
 @Resolver(() => Match)
+@UseFilters(GraphQLHttpExceptionFilter)
 export class MatchResolver {
   constructor(private matchService: MatchService) {}
 

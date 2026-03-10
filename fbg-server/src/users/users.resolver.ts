@@ -4,11 +4,13 @@ import { NewUserInput } from './gql/NewUserInput.gql';
 import { NewUser } from './gql/NewUser.gql';
 import { UsersService } from './users.service';
 import { CurrentUser, GqlAuthGuard } from '../internal/auth/GqlAuthGuard';
-import { UseGuards } from '@nestjs/common';
+import { UseFilters, UseGuards } from '@nestjs/common';
 import { FbgJwtService } from '../internal/auth/FbgJwtService';
 import { RoomsService } from '../rooms/rooms.service';
+import { GraphQLHttpExceptionFilter } from '../internal/gql/GraphQLHttpExceptionFilter';
 
 @Resolver(() => User)
+@UseFilters(GraphQLHttpExceptionFilter)
 export class UsersResolver {
   constructor(
     private usersService: UsersService,

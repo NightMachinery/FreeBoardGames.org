@@ -1,16 +1,17 @@
-import { HttpStatus, HttpException, Inject } from '@nestjs/common';
+import { HttpStatus, HttpException, Inject, UseFilters, UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args, Subscription } from '@nestjs/graphql';
 import { Message } from './gql/Message.gql';
 import { PubSub } from 'graphql-subscriptions';
 import { ChatService } from './chat.service';
 import { VALID_CHANNEL_TYPES } from './types';
-import { UseGuards } from '@nestjs/common';
 import { CurrentUser, GqlAuthGuard } from '../internal/auth/GqlAuthGuard';
 import { User } from '../users/gql/User.gql';
 import { SendMessageInput } from './gql/SendMessageInput.gql';
 import { FBG_PUB_SUB } from '../internal/FbgPubSubModule';
+import { GraphQLHttpExceptionFilter } from '../internal/gql/GraphQLHttpExceptionFilter';
 
 @Resolver(() => Message)
+@UseFilters(GraphQLHttpExceptionFilter)
 export class ChatResolver {
   constructor(private chatService: ChatService, @Inject(FBG_PUB_SUB) private pubSub: PubSub) {}
 
