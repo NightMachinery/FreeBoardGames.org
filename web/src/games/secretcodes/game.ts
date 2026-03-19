@@ -24,6 +24,7 @@ const GameConfig: Game<IG> = {
 
   setup: (ctx, customData: GameCustomizationState & { hostPlayerID?: string }): IG => {
     const fullCustomization = (customData?.full as FullCustomizationState) || DEFAULT_FULL_CUSTOMIZATION;
+    const blackCards = Math.max(0, Math.min(8, fullCustomization.blackCards ?? DEFAULT_FULL_CUSTOMIZATION.blackCards));
     const teams = new Array(2).fill(0).map((_, i) => makeTeam(i === 0 ? TeamColor.Blue : TeamColor.Red));
     if (ctx.numPlayers === 2) {
       teams[0].playersID = ['0'];
@@ -39,6 +40,7 @@ const GameConfig: Game<IG> = {
     return {
       teams,
       cards,
+      blackCards,
       hostPlayerID: customData?.hostPlayerID || '0',
       lastSelectedCardIndex,
       lastSelectedCardTeamColor: null,
@@ -107,11 +109,11 @@ const GameConfig: Game<IG> = {
   endIf: (G: IG, ctx: Ctx) => {
     // turn 1 is used to setup the game so we only check from turn 2 and up
     if (ctx.turn >= 2) {
-      const assassin = G.cards.find((card) => card.color === CardColor.assassin);
+      const assassinRevealed = G.cards.some((card) => card.color === CardColor.assassin && card.revealed);
       const blue = G.cards.filter((card) => card.color === CardColor.blue && !card.revealed);
       const red = G.cards.filter((card) => card.color === CardColor.red && !card.revealed);
 
-      if (assassin.revealed && G.lastSelectedCardTeamColor) {
+      if (assassinRevealed && G.lastSelectedCardTeamColor) {
         return {
           winner: getOtherTeam(G, getTeamByColor(G, G.lastSelectedCardTeamColor)),
         };

@@ -3,6 +3,7 @@ import { INVALID_MOVE } from 'boardgame.io/core';
 import { SecretcodesGame } from './game';
 import { Ctx } from 'boardgame.io';
 import { CardColor, Phases, TeamColor } from './definitions';
+import { DEFAULT_FULL_CUSTOMIZATION } from './customization';
 import { chooseCard, pass, switchTeam, toggleRepresentative, toggleSpymaster } from './util';
 
 describe('secret codes rules', () => {
@@ -58,6 +59,73 @@ describe('secret codes rules', () => {
 
     const ctx: Ctx = client.store.getState().ctx;
     expect(ctx.gameover.winner.color).toEqual(TeamColor.Red);
+  });
+
+  it('should create the configured number of black cards', () => {
+    const client = Client({
+      game: {
+        ...SecretcodesGame,
+        setup: (ctx) =>
+          SecretcodesGame.setup!(ctx, {
+            full: {
+              ...DEFAULT_FULL_CUSTOMIZATION,
+              blackCards: 3,
+            },
+          }),
+      },
+    }) as any;
+
+    client.moves.startGame();
+
+    const { G } = client.store.getState();
+    const blackCards = G.cards.filter((card) => card.color === CardColor.assassin);
+    expect(blackCards).toHaveLength(3);
+  });
+
+  it('should support zero black cards', () => {
+    const client = Client({
+      game: {
+        ...SecretcodesGame,
+        setup: (ctx) =>
+          SecretcodesGame.setup!(ctx, {
+            full: {
+              ...DEFAULT_FULL_CUSTOMIZATION,
+              blackCards: 0,
+            },
+          }),
+      },
+    }) as any;
+
+    client.moves.startGame();
+
+    const { G, ctx } = client.store.getState();
+    expect(G.cards.some((card) => card.color === CardColor.assassin)).toEqual(false);
+    expect(SecretcodesGame.endIf!(G, { ...ctx, turn: 2 } as Ctx)).toBeUndefined();
+  });
+
+  it('should lose if any black card is revealed', () => {
+    const gameOver = SecretcodesGame.endIf!(
+      {
+        teams: [
+          { color: TeamColor.Blue, playersID: ['0'], spymasterIDs: ['0'], representativeIDs: [] },
+          { color: TeamColor.Red, playersID: ['1'], spymasterIDs: ['1'], representativeIDs: [] },
+        ],
+        cards: [
+          { word: 'alpha', color: CardColor.assassin, revealed: false },
+          { word: 'beta', color: CardColor.assassin, revealed: true },
+          { word: 'gamma', color: CardColor.blue, revealed: false },
+          { word: 'delta', color: CardColor.red, revealed: false },
+        ],
+        blackCards: 2,
+        hostPlayerID: '0',
+        currentTeamIndex: 0,
+        lastSelectedCardIndex: 1,
+        lastSelectedCardTeamColor: TeamColor.Blue,
+      },
+      { turn: 2 } as Ctx,
+    );
+
+    expect(gameOver.winner.color).toEqual(TeamColor.Red);
   });
 
   it('should allow multiple spymasters on the same team', () => {

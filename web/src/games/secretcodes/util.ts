@@ -96,11 +96,12 @@ export function startGame(G: IG, ctx: Ctx) {
   G.teams = ctx.random.Shuffle(G.teams);
   G.currentTeamIndex = 0;
 
-  const key = ctx.random.Shuffle(G.cards).slice(0, 18) as Card[];
+  const blackCards = Math.max(0, Math.min(8, G.blackCards ?? 1));
+  const key = ctx.random.Shuffle(G.cards).slice(0, 17 + blackCards) as Card[];
   key.map((card, index) => {
-    if (index === 0) card.color = CardColor.assassin;
-    else if (index <= 8) card.color = CardColor.blue;
-    else if (index <= 16) card.color = CardColor.red;
+    if (index < blackCards) card.color = CardColor.assassin;
+    else if (index < blackCards + 8) card.color = CardColor.blue;
+    else if (index < blackCards + 16) card.color = CardColor.red;
     else card.color = getCardColorByTeamColor(getCurrentTeam(G).color);
   });
   ctx.events.endPhase();

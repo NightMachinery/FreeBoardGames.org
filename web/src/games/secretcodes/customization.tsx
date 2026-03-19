@@ -4,36 +4,60 @@ import { PREDEFINED_WORDS } from './constants';
 import TextField from '@material-ui/core/TextField';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
+import Typography from '@material-ui/core/Typography';
 import { useCurrentGameTranslation } from 'infra/i18n';
 
 export interface FullCustomizationState {
   words: string[];
+  blackCards: number;
 }
 
-export const DEFAULT_FULL_CUSTOMIZATION = { words: PREDEFINED_WORDS[0].words };
+export const DEFAULT_FULL_CUSTOMIZATION = {
+  words: PREDEFINED_WORDS[0].words,
+  blackCards: 1,
+};
+
+const BLACK_CARD_OPTIONS = Array.from({ length: 9 }, (_, count) => count);
+
+const normalizeState = (state?: FullCustomizationState): FullCustomizationState => ({
+  words: state?.words || DEFAULT_FULL_CUSTOMIZATION.words,
+  blackCards: state?.blackCards ?? DEFAULT_FULL_CUSTOMIZATION.blackCards,
+});
 
 const stateToText = (state: FullCustomizationState) => {
   return state.words.join('\n');
 };
 
-const textToState = (text): FullCustomizationState | undefined => {
-  if (stateToText(DEFAULT_FULL_CUSTOMIZATION) === text) {
+const toOptionalState = (state: FullCustomizationState): FullCustomizationState | undefined => {
+  const normalized = normalizeState(state);
+  const hasDefaultWords = stateToText(normalized) === stateToText(DEFAULT_FULL_CUSTOMIZATION);
+  const hasDefaultBlackCards = normalized.blackCards === DEFAULT_FULL_CUSTOMIZATION.blackCards;
+  if (hasDefaultWords && hasDefaultBlackCards) {
     return;
   }
-  return { words: text.split('\n') };
+  return normalized;
 };
 
 const changeTextValue =
-  (onChange: (FullCustomizationState) => void) => (event: React.ChangeEvent<HTMLInputElement>) => {
+  (onChange: (state?: FullCustomizationState) => void, state: FullCustomizationState) =>
+  (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputText = event.target.value;
-    const state = textToState(inputText);
-    onChange(state);
+    onChange(
+      toOptionalState({
+        ...state,
+        words: inputText.split('\n'),
+      }),
+    );
   };
 
 const getPredefinedWordsBucket = (state: FullCustomizationState) => {
+  const normalizedState = normalizeState(state);
   let i = 0;
   for (const predefinedWords of PREDEFINED_WORDS) {
-    if (stateToText({ words: predefinedWords.words }) === stateToText({ words: state.words })) {
+    if (
+      stateToText({ words: predefinedWords.words, blackCards: normalizedState.blackCards }) ===
+      stateToText(normalizedState)
+    ) {
       return i;
     }
     i++;
@@ -42,16 +66,31 @@ const getPredefinedWordsBucket = (state: FullCustomizationState) => {
 };
 
 const handlePredefinedWordChange =
-  (onChange: (state?: FullCustomizationState) => void) => (event: React.ChangeEvent<{ value: number }>) => {
+  (onChange: (state?: FullCustomizationState) => void, state: FullCustomizationState) =>
+  (event: React.ChangeEvent<{ value: number }>) => {
     const index = event.target.value;
     if (index === null) {
       return;
     }
-    if (index === 0) {
-      onChange();
-      return;
-    }
-    onChange({ words: PREDEFINED_WORDS[index].words });
+    const words = PREDEFINED_WORDS[index].words;
+    onChange(
+      toOptionalState({
+        ...state,
+        words,
+      }),
+    );
+  };
+
+const changeBlackCards =
+  (onChange: (state?: FullCustomizationState) => void, state: FullCustomizationState) =>
+  (event: React.ChangeEvent<{ value: number }>) => {
+    const blackCards = Number(event.target.value);
+    onChange(
+      toOptionalState({
+        ...state,
+        blackCards,
+      }),
+    );
   };
 
 const renderSelectValue = (index: number | null) => {
@@ -71,7 +110,7 @@ const renderPredefinedWordsSelect = (
       value={getPredefinedWordsBucket(state)}
       displayEmpty
       renderValue={renderSelectValue}
-      onChange={handlePredefinedWordChange(onChange)}
+      onChange={handlePredefinedWordChange(onChange, state)}
       style={{ width: '250px' }}
     >
       {PREDEFINED_WORDS.map((predefinedWords, index) => (
@@ -85,10 +124,19 @@ const renderPredefinedWordsSelect = (
 
 const FullCustomization = ({ currentValue, onChange }: GameCustomizationProps) => {
   const { translate } = useCurrentGameTranslation();
-  const state = (currentValue as FullCustomizationState) || DEFAULT_FULL_CUSTOMIZATION;
+  const state = normalizeState(currentValue as FullCustomizationState | undefined);
   return (
     <div>
       {renderPredefinedWordsSelect(onChange, state)}
+      <div style={{ height: '16px' }}></div>
+      <Typography>{translate('black_cards')}</Typography>
+      <Select value={state.blackCards} onChange={changeBlackCards(onChange, state)} style={{ width: '250px' }}>
+        {BLACK_CARD_OPTIONS.map((blackCards) => (
+          <MenuItem value={blackCards} key={blackCards}>
+            {blackCards}
+          </MenuItem>
+        ))}
+      </Select>
       <div style={{ height: '32px' }}></div>
       <TextField
         label={translate('words', { size: state.words.length })}
@@ -97,7 +145,7 @@ const FullCustomization = ({ currentValue, onChange }: GameCustomizationProps) =
         rows={15}
         value={stateToText(state)}
         variant="outlined"
-        onChange={changeTextValue(onChange)}
+        onChange={changeTextValue(onChange, state)}
       />
     </div>
   );

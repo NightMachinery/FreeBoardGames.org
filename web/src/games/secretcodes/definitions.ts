@@ -30,6 +30,7 @@ export interface Card {
 export interface IG {
   teams: Team[];
   cards: Card[];
+  blackCards: number;
   hostPlayerID: string;
   currentTeamIndex?: number;
   /**
