@@ -26,6 +26,36 @@ const csrfProtection = csurf({ cookie: true });
 const DOMAIN = 'www.freeboardgames.org';
 const URL = 'https://' + DOMAIN;
 
+function proxyErrorHandler(err: Error & { code?: string }, req: express.Request, res: any) {
+  const host = req.headers?.host || 'unknown-host';
+  const code = err.code || 'UNKNOWN';
+  const path = req.url || '';
+  console.error(`[HPM] Proxy error while forwarding ${host}${path}: ${code}`);
+
+  if (typeof res.writeHead === 'function') {
+    if (!res.headersSent) {
+      switch (code) {
+        case 'ECONNRESET':
+        case 'ENOTFOUND':
+        case 'ECONNREFUSED':
+        case 'ETIMEDOUT':
+          res.writeHead(504);
+          break;
+        default:
+          res.writeHead(500);
+      }
+    }
+    if (!res.writableEnded) {
+      res.end(`Error occurred while trying to proxy: ${host}${path}`);
+    }
+    return;
+  }
+
+  if (typeof res.destroy === 'function' && !res.destroyed) {
+    res.destroy();
+  }
+}
+
 generateSiteMapXML({
   host: URL,
   staticDir: STATIC_DIR,
@@ -35,15 +65,17 @@ app
   .prepare()
   .then(() => {
     const server = express();
-    const graphqlProxy = createProxyMiddleware({
+    const graphqlProxy = createProxyMiddleware('/graphql', {
       target: INTERNAL_BACKEND_TARGET,
       changeOrigin: true,
       ws: true,
+      onError: proxyErrorHandler,
     });
-    const bgioProxy = createProxyMiddleware({
+    const bgioProxy = createProxyMiddleware(['/socket.io', '/games'], {
       target: INTERNAL_BGIO_TARGET,
       changeOrigin: true,
       ws: true,
+      onError: proxyErrorHandler,
     });
     server.disable('x-powered-by');
     server.use(cookieParser());
@@ -93,9 +125,8 @@ app
 
     server.use('/docs', express.static(`${STATIC_DIR}/docs`));
 
-    server.use('/graphql', graphqlProxy);
-    server.use('/socket.io', bgioProxy);
-    server.use('/games', bgioProxy);
+    server.use(graphqlProxy);
+    server.use(bgioProxy);
 
     server.get('*', csrfProtection, (req, res) => {
       res.cookie('XSRF-TOKEN', (req as any).csrfToken());
@@ -112,7 +143,7 @@ app
         (graphqlProxy as any).upgrade(req, socket, head);
         return;
       }
-      if (reqUrl.startsWith('/socket.io')) {
+      if (reqUrl.startsWith('/socket.io') || reqUrl.startsWith('/games')) {
         (bgioProxy as any).upgrade(req, socket, head);
       }
     });
