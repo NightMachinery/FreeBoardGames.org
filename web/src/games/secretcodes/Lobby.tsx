@@ -9,6 +9,7 @@ import { isLocalGame } from '../../gamesShared/helpers/gameMode';
 import Button from '@material-ui/core/Button';
 import { getPlayerTeam, gameCanStart } from './util';
 import { useCurrentGameTranslation } from 'infra/i18n';
+import { fetchSecretcodesPicturesManifest } from './pictures';
 
 interface ILobbyProps {
   G: IG;
@@ -22,16 +23,65 @@ interface ILobbyProps {
 
 export function Lobby({ G, ctx, moves, playerID, gameArgs, isHost }: ILobbyProps) {
   const { translate } = useCurrentGameTranslation();
+  const [picturesValidation, setPicturesValidation] = React.useState({
+    loading: G.picturesMode,
+    available: !G.picturesMode,
+    count: 0,
+  });
 
   const startGame = () => {
     moves.startGame();
   };
 
   React.useEffect(() => {
-    if (isLocalGame(gameArgs) && gameCanStart(G, ctx)) {
+    let mounted = true;
+
+    if (!G.picturesMode) {
+      setPicturesValidation({
+        loading: false,
+        available: true,
+        count: 0,
+      });
+      return () => {
+        mounted = false;
+      };
+    }
+
+    setPicturesValidation((current) => ({ ...current, loading: true }));
+    fetchSecretcodesPicturesManifest()
+      .then((manifest) => {
+        if (!mounted) {
+          return;
+        }
+
+        setPicturesValidation({
+          loading: false,
+          available: manifest.available,
+          count: manifest.count,
+        });
+      })
+      .catch(() => {
+        if (!mounted) {
+          return;
+        }
+
+        setPicturesValidation({
+          loading: false,
+          available: false,
+          count: 0,
+        });
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [G.picturesMode]);
+
+  React.useEffect(() => {
+    if (isLocalGame(gameArgs) && gameCanStart(G, ctx) && (!G.picturesMode || picturesValidation.available)) {
       startGame();
     }
-  }, []);
+  }, [G, ctx, gameArgs, picturesValidation.available, G.picturesMode]);
 
   const teams = {
     [TeamColor.Blue]: [],
@@ -40,6 +90,9 @@ export function Lobby({ G, ctx, moves, playerID, gameArgs, isHost }: ILobbyProps
   };
 
   const { players } = gameArgs;
+  const canStart = gameCanStart(G, ctx) && (!G.picturesMode || picturesValidation.available);
+  const showPicturesLoading = G.picturesMode && picturesValidation.loading;
+  const showPicturesError = G.picturesMode && !picturesValidation.loading && !picturesValidation.available;
 
   for (const playerID in players) {
     const item = (
@@ -79,6 +132,10 @@ export function Lobby({ G, ctx, moves, playerID, gameArgs, isHost }: ILobbyProps
       </div>
 
       {!gameCanStart(G, ctx) ? <p className={css.text}>{translate('in_order_to_start')}</p> : null}
+      {showPicturesLoading ? <p className={css.text}>{translate('pictures_mode_loading')}</p> : null}
+      {showPicturesError ? (
+        <p className={css.text}>{translate('pictures_mode_requires_images', { count: picturesValidation.count })}</p>
+      ) : null}
 
       {isHost ? (
         <Button
@@ -86,7 +143,7 @@ export function Lobby({ G, ctx, moves, playerID, gameArgs, isHost }: ILobbyProps
           variant="contained"
           onClick={startGame}
           color="primary"
-          disabled={!gameCanStart(G, ctx)}
+          disabled={!canStart || showPicturesLoading}
         >
           {translate('play')}
         </Button>
