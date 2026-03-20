@@ -5,16 +5,19 @@ import TextField from '@material-ui/core/TextField';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import Typography from '@material-ui/core/Typography';
+import Switch from '@material-ui/core/Switch';
 import { useCurrentGameTranslation } from 'infra/i18n';
 
 export interface FullCustomizationState {
   words: string[];
   blackCards: number;
+  picturesMode: boolean;
 }
 
 export const DEFAULT_FULL_CUSTOMIZATION = {
   words: PREDEFINED_WORDS[0].words,
   blackCards: 1,
+  picturesMode: false,
 };
 
 const BLACK_CARD_OPTIONS = Array.from({ length: 9 }, (_, count) => count);
@@ -22,6 +25,7 @@ const BLACK_CARD_OPTIONS = Array.from({ length: 9 }, (_, count) => count);
 const normalizeState = (state?: FullCustomizationState): FullCustomizationState => ({
   words: state?.words || DEFAULT_FULL_CUSTOMIZATION.words,
   blackCards: state?.blackCards ?? DEFAULT_FULL_CUSTOMIZATION.blackCards,
+  picturesMode: state?.picturesMode ?? DEFAULT_FULL_CUSTOMIZATION.picturesMode,
 });
 
 const stateToText = (state: FullCustomizationState) => {
@@ -32,7 +36,8 @@ const toOptionalState = (state: FullCustomizationState): FullCustomizationState 
   const normalized = normalizeState(state);
   const hasDefaultWords = stateToText(normalized) === stateToText(DEFAULT_FULL_CUSTOMIZATION);
   const hasDefaultBlackCards = normalized.blackCards === DEFAULT_FULL_CUSTOMIZATION.blackCards;
-  if (hasDefaultWords && hasDefaultBlackCards) {
+  const hasDefaultPicturesMode = normalized.picturesMode === DEFAULT_FULL_CUSTOMIZATION.picturesMode;
+  if (hasDefaultWords && hasDefaultBlackCards && hasDefaultPicturesMode) {
     return;
   }
   return normalized;
@@ -55,8 +60,11 @@ const getPredefinedWordsBucket = (state: FullCustomizationState) => {
   let i = 0;
   for (const predefinedWords of PREDEFINED_WORDS) {
     if (
-      stateToText({ words: predefinedWords.words, blackCards: normalizedState.blackCards }) ===
-      stateToText(normalizedState)
+      stateToText({
+        words: predefinedWords.words,
+        blackCards: normalizedState.blackCards,
+        picturesMode: normalizedState.picturesMode,
+      }) === stateToText(normalizedState)
     ) {
       return i;
     }
@@ -89,6 +97,16 @@ const changeBlackCards =
       toOptionalState({
         ...state,
         blackCards,
+      }),
+    );
+  };
+
+const changePicturesMode =
+  (onChange: (state?: FullCustomizationState) => void, state: FullCustomizationState) => () => {
+    onChange(
+      toOptionalState({
+        ...state,
+        picturesMode: !state.picturesMode,
       }),
     );
   };
@@ -127,6 +145,9 @@ const FullCustomization = ({ currentValue, onChange }: GameCustomizationProps) =
   const state = normalizeState(currentValue as FullCustomizationState | undefined);
   return (
     <div>
+      <Typography>{translate('pictures_mode')}</Typography>
+      <Switch checked={state.picturesMode} onChange={changePicturesMode(onChange, state)} color="primary" />
+      <div style={{ height: '16px' }}></div>
       {renderPredefinedWordsSelect(onChange, state)}
       <div style={{ height: '16px' }}></div>
       <Typography>{translate('black_cards')}</Typography>

@@ -31,6 +31,8 @@ export interface IG {
   teams: Team[];
   cards: Card[];
   blackCards: number;
+  picturesMode: boolean;
+  picturesSeed: string;
   hostPlayerID: string;
   currentTeamIndex?: number;
   /**

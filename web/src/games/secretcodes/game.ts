@@ -25,6 +25,7 @@ const GameConfig: Game<IG> = {
   setup: (ctx, customData: GameCustomizationState & { hostPlayerID?: string }): IG => {
     const fullCustomization = (customData?.full as FullCustomizationState) || DEFAULT_FULL_CUSTOMIZATION;
     const blackCards = Math.max(0, Math.min(8, fullCustomization.blackCards ?? DEFAULT_FULL_CUSTOMIZATION.blackCards));
+    const picturesMode = fullCustomization.picturesMode ?? DEFAULT_FULL_CUSTOMIZATION.picturesMode;
     const teams = new Array(2).fill(0).map((_, i) => makeTeam(i === 0 ? TeamColor.Blue : TeamColor.Red));
     if (ctx.numPlayers === 2) {
       teams[0].playersID = ['0'];
@@ -37,10 +38,13 @@ const GameConfig: Game<IG> = {
       .slice(0, 25)
       .map((word) => makeCard(word));
     const lastSelectedCardIndex = null;
+    const picturesSeed = cards.map((card) => card.word).join('|');
     return {
       teams,
       cards,
       blackCards,
+      picturesMode,
+      picturesSeed,
       hostPlayerID: customData?.hostPlayerID || '0',
       lastSelectedCardIndex,
       lastSelectedCardTeamColor: null,

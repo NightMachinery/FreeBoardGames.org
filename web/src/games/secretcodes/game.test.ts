@@ -103,6 +103,26 @@ describe('secret codes rules', () => {
     expect(SecretcodesGame.endIf!(G, { ...ctx, turn: 2 } as Ctx)).toBeUndefined();
   });
 
+  it('should enable pictures mode when configured', () => {
+    const client = Client({
+      game: {
+        ...SecretcodesGame,
+        setup: (ctx) =>
+          SecretcodesGame.setup!(ctx, {
+            full: {
+              ...DEFAULT_FULL_CUSTOMIZATION,
+              picturesMode: true,
+            },
+          }),
+      },
+    }) as any;
+
+    const { G } = client.store.getState();
+    expect(G.picturesMode).toEqual(true);
+    expect(G.picturesSeed).toBeString();
+    expect(G.picturesSeed).not.toEqual('');
+  });
+
   it('should lose if any black card is revealed', () => {
     const gameOver = SecretcodesGame.endIf!(
       {
@@ -117,6 +137,8 @@ describe('secret codes rules', () => {
           { word: 'delta', color: CardColor.red, revealed: false },
         ],
         blackCards: 2,
+        picturesMode: false,
+        picturesSeed: 'seed',
         hostPlayerID: '0',
         currentTeamIndex: 0,
         lastSelectedCardIndex: 1,
