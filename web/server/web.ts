@@ -7,6 +7,7 @@ import csurf from 'csurf';
 import cookieParser from 'cookie-parser';
 import { setupLogging } from './logging';
 import { generateSiteMapXML } from './sitemap';
+import { getSecretcodesPicturesCatalog } from './secretcodesPictures';
 
 const INTERNAL_BACKEND_TARGET = process.env.FBG_BACKEND_TARGET || 'http://localhost:3001';
 const INTERNAL_BGIO_TARGET =
@@ -80,6 +81,28 @@ app
     server.disable('x-powered-by');
     server.use(cookieParser());
     setupLogging(server, 'fbg-web');
+
+    server.get('/secretcodes/pictures/catalog', async (req, res) => {
+      const catalog = await getSecretcodesPicturesCatalog();
+      res.json({
+        enabled: catalog.enabled,
+        available: catalog.available,
+        count: catalog.count,
+        imageIds: catalog.imageIds,
+      });
+    });
+
+    server.get('/secretcodes/pictures/image/:imageId', async (req, res) => {
+      const catalog = await getSecretcodesPicturesCatalog();
+      const imageId = req.params.imageId;
+      const entry = catalog.entriesById.get(imageId);
+      if (!entry) {
+        res.sendStatus(404);
+        return;
+      }
+
+      res.sendFile(entry.absolutePath);
+    });
 
     server.get('/.well-known/assetlinks.json', (req, res) => {
       if (isProdChannel && isOfficialSite(req.hostname)) {
