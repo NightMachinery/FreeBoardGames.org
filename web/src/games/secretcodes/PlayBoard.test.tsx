@@ -5,6 +5,9 @@ import { PlayBoard } from './PlayBoard';
 import { GameMode } from 'gamesShared/definitions/mode';
 import { CardColor, TeamColor } from './definitions';
 import { chooseCard } from './util';
+import { resetSecretcodesPicturesManifestCache } from './pictures';
+
+const originalFetch = (global as any).fetch;
 
 function render(
   client: any,
@@ -43,6 +46,8 @@ describe('Secretcodes UI', () => {
   let state;
 
   beforeEach(() => {
+    resetSecretcodesPicturesManifestCache();
+    (global as any).fetch = originalFetch;
     client = Client({
       game: SecretcodesGame,
     });
@@ -57,6 +62,11 @@ describe('Secretcodes UI', () => {
         { color: TeamColor.Blue, playersID: ['2', '3'], spymasterIDs: ['2'], representativeIDs: [] },
       ],
     };
+  });
+
+  afterEach(() => {
+    resetSecretcodesPicturesManifestCache();
+    (global as any).fetch = originalFetch;
   });
 
   it('should highlight the last selected card.', () => {
@@ -167,5 +177,31 @@ describe('Secretcodes UI', () => {
     expect(moves.chooseCard).not.toHaveBeenCalled();
     expect(wrapper.find('.playActionBtn').exists()).toBeFalsy();
     expect(moves.pass).not.toHaveBeenCalled();
+  });
+
+  it('should render picture cards with a 2:3 card class and image content in pictures mode', async () => {
+    (global as any).fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        enabled: true,
+        available: true,
+        count: 30,
+        imageIds: Array.from({ length: 30 }, (_, index) => `image-${index}`),
+      }),
+    });
+
+    state.ctx = { ...state.ctx, currentPlayer: '0' };
+    const newCards = [...state.G.cards];
+    newCards[0] = { ...newCards[0], revealed: true, color: CardColor.blue };
+    state.G = { ...state.G, cards: newCards, picturesMode: true, picturesSeed: 'seed' };
+
+    const wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    const firstCard = wrapper.find('.card').at(0);
+    expect(firstCard.hasClass('cardPictures')).toBeTruthy();
+    expect(firstCard.hasClass('cardBlue')).toBeTruthy();
+    expect(wrapper.find('img.cardImage').exists()).toBeTruthy();
   });
 });

@@ -16,6 +16,11 @@ import { PlayerBadges } from 'gamesShared/components/badges/PlayerBadges';
 import { GameMode } from 'gamesShared/definitions/mode';
 import { Trans, WithCurrentGameTranslation, withCurrentGameTranslation } from 'infra/i18n';
 import { compose } from 'recompose';
+import {
+  fetchSecretcodesPicturesManifest,
+  getSecretcodesPictureImageUrl,
+  pickSecretcodesPictureImageIds,
+} from './pictures';
 
 interface IPlayBoardInnerProps extends WithCurrentGameTranslation {}
 interface IPlayBoardOutterProps {
@@ -32,12 +37,31 @@ interface IPlayBoardOutterProps {
 
 interface IPlayBoardState {
   spymasterView: boolean;
+  picturesLoaded: boolean;
+  picturesAvailable: boolean;
+  pictureImageIds: string[];
 }
 
 export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IPlayBoardOutterProps, IPlayBoardState> {
   state = {
     spymasterView: false,
+    picturesLoaded: !this.props.G.picturesMode,
+    picturesAvailable: !this.props.G.picturesMode,
+    pictureImageIds: [],
   };
+
+  componentDidMount() {
+    this._loadPicturesIfNeeded();
+  }
+
+  componentDidUpdate(prevProps: IPlayBoardInnerProps & IPlayBoardOutterProps) {
+    if (
+      prevProps.G.picturesMode !== this.props.G.picturesMode ||
+      prevProps.G.picturesSeed !== this.props.G.picturesSeed
+    ) {
+      this._loadPicturesIfNeeded();
+    }
+  }
 
   _isActive() {
     return isLocalGame(this.props.gameArgs) || this.props.isActive;
@@ -76,6 +100,42 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     if (!this._canGuess()) return;
 
     this.props.moves.pass();
+  };
+
+  _loadPicturesIfNeeded = () => {
+    if (!this.props.G.picturesMode) {
+      this.setState({
+        picturesLoaded: true,
+        picturesAvailable: true,
+        pictureImageIds: [],
+      });
+      return;
+    }
+
+    this.setState({
+      picturesLoaded: false,
+      picturesAvailable: false,
+      pictureImageIds: [],
+    });
+
+    fetchSecretcodesPicturesManifest()
+      .then((manifest) => {
+        const pictureImageIds = manifest.available
+          ? pickSecretcodesPictureImageIds(manifest.imageIds, this.props.G.picturesSeed, this.props.G.cards.length)
+          : [];
+        this.setState({
+          picturesLoaded: true,
+          picturesAvailable: manifest.available && pictureImageIds.length === this.props.G.cards.length,
+          pictureImageIds,
+        });
+      })
+      .catch(() => {
+        this.setState({
+          picturesLoaded: true,
+          picturesAvailable: false,
+          pictureImageIds: [],
+        });
+      });
   };
 
   _renderHeader = () => {
@@ -126,13 +186,34 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     );
   };
 
+  _renderCardContent = (cardIndex: number) => {
+    const card = this.props.G.cards[cardIndex];
+    if (!this.props.G.picturesMode) {
+      return card.word;
+    }
+
+    const imageId = this.state.pictureImageIds[cardIndex];
+    if (imageId) {
+      return <img className={css.cardImage} src={getSecretcodesPictureImageUrl(imageId)} alt="" draggable={false} />;
+    }
+
+    return <span className={css.cardFallbackWord}>{card.word}</span>;
+  };
+
   _renderCardGrid = () => {
     let board = [];
+    const boardClasses = [css.board];
+    if (this.props.G.picturesMode) {
+      boardClasses.push(css.boardPictures);
+    }
 
     for (let i = 0; i < 25; i += 1) {
       const card = this.props.G.cards[i];
 
       const classes = [css.card];
+      if (this.props.G.picturesMode) {
+        classes.push(css.cardPictures);
+      }
       if (card.revealed && this._showSpymasterView() && !this.props.isGameOver) {
         classes.push(css.cardRevealedSpymasterView);
       }
@@ -150,12 +231,12 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
       board.push(
         <div className={classes.join(' ')} key={i} onClick={() => this._chooseCard(i)}>
-          {card.word}
+          {this._renderCardContent(i)}
         </div>,
       );
     }
 
-    return <div className={css.board}>{board}</div>;
+    return <div className={boardClasses.join(' ')}>{board}</div>;
   };
 
   _renderPlayerBadges = () => {
@@ -202,6 +283,9 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     return (
       <div>
         {this._renderHeader()}
+        {this.props.G.picturesMode && this.state.picturesLoaded && !this.state.picturesAvailable ? (
+          <p className={css.pictureStatus}>{this.props.translate('pictures_mode_unavailable')}</p>
+        ) : null}
         {this._renderCardGrid()}
         {this._renderActionButtons()}
         {this._renderPlayerBadges()}
