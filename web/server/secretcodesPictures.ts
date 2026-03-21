@@ -5,6 +5,7 @@ import path from 'path';
 
 const MIN_PICTURES = 25;
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
+const DEFAULT_CODENAMES_PICTURES_DIR = '~/Pictures/SurrealPictures/chosen_1';
 
 export interface ISecretcodesPictureCatalogEntry {
   id: string;
@@ -23,7 +24,9 @@ let catalogPromise: Promise<ISecretcodesPicturesCatalog> | null = null;
 
 export function getSecretcodesPicturesCatalog(): Promise<ISecretcodesPicturesCatalog> {
   if (!catalogPromise) {
-    catalogPromise = buildSecretcodesPicturesCatalog(process.env.CODENAMES_PICTURES_DIR);
+    catalogPromise = buildSecretcodesPicturesCatalog(
+      process.env.CODENAMES_PICTURES_DIR || DEFAULT_CODENAMES_PICTURES_DIR,
+    );
   }
 
   return catalogPromise;

@@ -9,6 +9,8 @@ nvm use 16
 ROOT_DIR=$(cd "$(dirname "$0")" && pwd)
 cd "$ROOT_DIR"
 
+DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/SurrealPictures/chosen_1}"
+
 say() { print -r -- "$@"; }
 
 FORCE_BUILD="false"
@@ -94,6 +96,7 @@ NODE_ENV=production
 CHANNEL=production
 FORCE_DB_SYNC=true
 JWT_SECRET=${JWT_SECRET_VALUE}
+CODENAMES_PICTURES_DIR=${DEFAULT_CODENAMES_PICTURES_DIR}
 EOF_ENV
   say "Created .env.local (edit if needed)."
 else
@@ -112,6 +115,9 @@ else
   fi
   if ! grep -q "^FBG_REDIS_PASSWORD=" .env.local; then
     set_env_var .env.local "FBG_REDIS_PASSWORD" ""
+  fi
+  if ! grep -q "^CODENAMES_PICTURES_DIR=" .env.local; then
+    set_env_var .env.local "CODENAMES_PICTURES_DIR" "${DEFAULT_CODENAMES_PICTURES_DIR}"
   fi
 fi
 

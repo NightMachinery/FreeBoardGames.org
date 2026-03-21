@@ -61,10 +61,10 @@ type Message {
 
 type Query {
   user: User!
+  publicRoom(id: String!): Room!
   lobby: Lobby!
   match(id: String!): Match!
   publicMatch(id: String!): Match!
-  publicRoom(id: String!): Room!
 }
 
 type Mutation {
