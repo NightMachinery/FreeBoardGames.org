@@ -8,6 +8,11 @@ cd "$ROOT_DIR"
 NODE_VERSION="${NODE_VERSION:-$(<"$ROOT_DIR/.nvmrc")}"
 ENV_FILE="${ENV_FILE:-$ROOT_DIR/.env.http.local}"
 DEFAULT_PUBLIC_HOST="${DEFAULT_PUBLIC_HOST:-pinky.lilf.ir:3000}"
+DEFAULT_CADDY_HOST="${DEFAULT_CADDY_HOST:-fbg.pinky.lilf.ir}"
+DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/SurrealPictures/chosen_1}"
+CADDYFILE_PATH="${CADDYFILE_PATH:-$HOME/Caddyfile}"
+CADDY_BLOCK_BEGIN="# BEGIN freeboardgames http self-host"
+CADDY_BLOCK_END="# END freeboardgames http self-host"
 
 SESSION_WEB="fbg-http-web"
 SESSION_BGIO="fbg-http-bgio"
@@ -41,7 +46,7 @@ normalize_host() {
   local host="${1:-$DEFAULT_PUBLIC_HOST}"
   host="${host#http://}"
   host="${host#https://}"
-  host="${host%%/}"
+  host="${host%%/*}"
   print -r -- "$host"
 }
 
@@ -76,6 +81,7 @@ FORCE_DB_SYNC=true
 JWT_SECRET=$jwt_secret
 WEB_NODE_ENV=production
 BACKEND_NODE_ENV=development
+CODENAMES_PICTURES_DIR=$DEFAULT_CODENAMES_PICTURES_DIR
 EOF
 
   say "Wrote $ENV_FILE"
@@ -100,6 +106,157 @@ load_repo_env() {
   export JWT_SECRET="${JWT_SECRET:-unsafe-change-me}"
   export WEB_NODE_ENV="${WEB_NODE_ENV:-production}"
   export BACKEND_NODE_ENV="${BACKEND_NODE_ENV:-development}"
+  export CODENAMES_PICTURES_DIR="${CODENAMES_PICTURES_DIR:-$DEFAULT_CODENAMES_PICTURES_DIR}"
+}
+
+set_env_value() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+
+  python3 - "$file" "$key" "$value" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1]).expanduser()
+key = sys.argv[2]
+value = sys.argv[3]
+
+try:
+    text = path.read_text()
+except FileNotFoundError:
+    text = ""
+
+lines = text.splitlines()
+updated = []
+replaced = False
+
+for line in lines:
+    if line.startswith(f"{key}="):
+        updated.append(f"{key}={value}")
+        replaced = True
+    else:
+        updated.append(line)
+
+if not replaced:
+    updated.append(f"{key}={value}")
+
+path.write_text("\n".join(updated) + "\n")
+PY
+}
+
+sync_caddy_env() {
+  local host="$1"
+  [[ -f "$ENV_FILE" ]] || die "Missing $ENV_FILE. Run ./run_tmux_http.zsh env-init first."
+
+  set_env_value "$ENV_FILE" "PUBLIC_HOST" "$host"
+  set_env_value "$ENV_FILE" "PUBLIC_URL" "http://$host"
+  set_env_value "$ENV_FILE" "BGIO_PUBLIC_SERVERS" "http://$host"
+
+  say "Updated $ENV_FILE for http://$host"
+}
+
+write_caddy_block() {
+  local host="$1"
+
+  python3 - "$CADDYFILE_PATH" "$host" "$CADDY_BLOCK_BEGIN" "$CADDY_BLOCK_END" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1]).expanduser()
+host = sys.argv[2]
+start = sys.argv[3]
+end = sys.argv[4]
+
+block = f"""{start}
+http://{host} {{
+\tencode zstd gzip
+
+\t@graphql {{
+\t\tpath /graphql*
+\t}}
+\t@bgio {{
+\t\tpath /socket.io* /games/*
+\t}}
+\treverse_proxy @graphql 127.0.0.1:3001
+\treverse_proxy @bgio 127.0.0.1:8001
+\treverse_proxy 127.0.0.1:3000
+}}
+{end}
+"""
+
+path.parent.mkdir(parents=True, exist_ok=True)
+try:
+    text = path.read_text()
+except FileNotFoundError:
+    text = ""
+
+if start in text and end in text:
+    start_idx = text.index(start)
+    end_idx = text.index(end, start_idx) + len(end)
+    new_text = text[:start_idx] + block + text[end_idx:]
+else:
+    trimmed = text.rstrip()
+    if trimmed:
+        new_text = trimmed + "\n\n" + block
+    else:
+        new_text = block
+
+if not new_text.endswith("\n"):
+    new_text += "\n"
+
+path.write_text(new_text)
+PY
+
+  say "Updated $CADDYFILE_PATH for http://$host"
+}
+
+reload_or_start_caddy() {
+  command -v caddy >/dev/null 2>&1 || die "caddy is not installed."
+
+  caddy validate --config "$CADDYFILE_PATH" --adapter caddyfile >/dev/null || die "Caddy validation failed for $CADDYFILE_PATH"
+
+  if caddy reload --config "$CADDYFILE_PATH" --adapter caddyfile >/dev/null 2>&1; then
+    say "Reloaded Caddy from $CADDYFILE_PATH"
+    return
+  fi
+
+  if pgrep -x caddy >/dev/null 2>&1; then
+    die "Caddy appears to be running, but reload failed. Try: caddy reload --config $CADDYFILE_PATH --adapter caddyfile"
+  fi
+
+  local caddy_log="${CADDY_LOG_PATH:-$HOME/.caddy-fbg.log}"
+  caddy run --config "$CADDYFILE_PATH" --adapter caddyfile >"$caddy_log" 2>&1 < /dev/null &!
+  say "Started Caddy with $CADDYFILE_PATH (log: $caddy_log)"
+}
+
+restart_app_if_running() {
+  if ! command -v tmux >/dev/null 2>&1; then
+    say "tmux is not installed; skipped app restart."
+    return
+  fi
+
+  local session
+  for session in "$SESSION_WEB" "$SESSION_BGIO" "$SESSION_BACKEND"; do
+    if tmux has-session -t "$session" 2>/dev/null; then
+      say "Restarting tmux sessions to apply the updated public host."
+      stop_sessions
+      start_sessions
+      return
+    fi
+  done
+
+  say "No app tmux sessions were running. Run ./run_tmux_http.zsh start when ready."
+}
+
+enable_caddy() {
+  local host
+  host="$(normalize_host "${1:-$DEFAULT_CADDY_HOST}")"
+
+  sync_caddy_env "$host"
+  write_caddy_block "$host"
+  reload_or_start_caddy
+  restart_app_if_running
 }
 
 ensure_tmux() {
@@ -182,9 +339,10 @@ install_local() {
 }
 
 tmux_env_exports() {
-  cat <<'EOF'
+  cat <<EOF
 export ALL_PROXY=http://127.0.0.1:1087 all_proxy=http://127.0.0.1:1087 http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087 HTTP_PROXY=http://127.0.0.1:1087 HTTPS_PROXY=http://127.0.0.1:1087;
 export NO_PROXY=127.0.0.1,localhost no_proxy=127.0.0.1,localhost;
+export CODENAMES_PICTURES_DIR=${(q)CODENAMES_PICTURES_DIR};
 EOF
 }
 
@@ -278,6 +436,9 @@ main() {
       stop_sessions
       start_sessions
       ;;
+    enable-caddy)
+      enable_caddy "${2:-$DEFAULT_CADDY_HOST}"
+      ;;
     status)
       status_sessions
       ;;
@@ -288,7 +449,7 @@ main() {
       show_logs "${2:-}"
       ;;
     *)
-      die "Usage: ./run_tmux_http.zsh [env-init [host:port]|install|start|stop|restart|status|attach <web|bgio|backend>|logs <web|bgio|backend>]"
+      die "Usage: ./run_tmux_http.zsh [env-init [host:port]|install|start|stop|restart|enable-caddy [host]|status|attach <web|bgio|backend>|logs <web|bgio|backend>]"
       ;;
   esac
 }
