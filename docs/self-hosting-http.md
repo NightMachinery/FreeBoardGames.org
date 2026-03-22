@@ -160,3 +160,4 @@ http://pinky.lilf.ir:3000
 - `BACKEND_NODE_ENV=development` is intentional here; it avoids Redis for a single-VPS setup.
 - If you later want a Redis-backed production backend, set `BACKEND_NODE_ENV=production` and add the Redis env vars before starting.
 - HTTPS/Caddy scripts still use `.env.local`; this HTTP workflow reads `.env.http.local`.
+- If you want to keep plain HTTP available **and** add self-signed HTTPS on the same host, use the tmux+Caddy flow from `selfhost.md` and run `./run.zsh --https-self-signed`.

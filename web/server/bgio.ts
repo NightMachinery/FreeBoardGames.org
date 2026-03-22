@@ -12,6 +12,18 @@ import { PostgresStore } from 'bgio-postgres';
 
 const PORT = parseInt(process.env.BGIO_PORT || '8001', 10);
 
+function getAllowedOrigins() {
+  const rawOrigins = process.env.BGIO_ALLOWED_ORIGINS || process.env.BGIO_PUBLIC_SERVERS || 'http://localhost';
+  const origins = rawOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (origins.length <= 1) {
+    return origins[0] || 'http://localhost';
+  }
+  return origins;
+}
+
 function getDb() {
   const pgUrl = process.env.POSTGRES_URL;
   if (!pgUrl) {
@@ -36,7 +48,7 @@ const startServer = async () => {
   const configs = Promise.all(GAMES_LIST.map((gameDef) => gameDef.config()));
   const games = (await configs).map((config) => config.default.bgioGame);
   const db = getDb();
-  const origins = process.env.BGIO_PUBLIC_SERVERS || 'http://localhost';
+  const origins = getAllowedOrigins();
   const server = Server({ games, db, origins, transport: getTransport() });
   server.app.use(noCache({ global: true }));
   server.app.use(cors());

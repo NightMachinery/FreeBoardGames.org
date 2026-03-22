@@ -92,6 +92,7 @@ BGIO_PUBLIC_SERVERS=
 FBG_REDIS_HOST=127.0.0.1
 FBG_REDIS_PORT=6379
 FBG_REDIS_PASSWORD=
+BGIO_ALLOWED_ORIGINS=
 NODE_ENV=production
 CHANNEL=production
 FORCE_DB_SYNC=true
@@ -115,6 +116,9 @@ else
   fi
   if ! grep -q "^FBG_REDIS_PASSWORD=" .env.local; then
     set_env_var .env.local "FBG_REDIS_PASSWORD" ""
+  fi
+  if ! grep -q "^BGIO_ALLOWED_ORIGINS=" .env.local; then
+    set_env_var .env.local "BGIO_ALLOWED_ORIGINS" ""
   fi
   if ! grep -q "^CODENAMES_PICTURES_DIR=" .env.local; then
     set_env_var .env.local "CODENAMES_PICTURES_DIR" "${DEFAULT_CODENAMES_PICTURES_DIR}"
@@ -160,6 +164,41 @@ EOF_CADDY
 
 cat > "$ROOT_DIR/caddy_config_http" <<'EOF_CADDY'
 http://{$PUBLIC_HOST} {
+  encode zstd gzip
+
+  @graphql {
+    path /graphql*
+  }
+  @bgio {
+    path /socket.io* /games/*
+  }
+  reverse_proxy @graphql 127.0.0.1:3001
+  reverse_proxy @bgio 127.0.0.1:8001
+  reverse_proxy 127.0.0.1:3000
+}
+EOF_CADDY
+
+cat > "$ROOT_DIR/caddy_config_self_signed" <<'EOF_CADDY'
+{
+  auto_https disable_redirects
+}
+
+http://{$PUBLIC_HOST} {
+  encode zstd gzip
+
+  @graphql {
+    path /graphql*
+  }
+  @bgio {
+    path /socket.io* /games/*
+  }
+  reverse_proxy @graphql 127.0.0.1:3001
+  reverse_proxy @bgio 127.0.0.1:8001
+  reverse_proxy 127.0.0.1:3000
+}
+
+https://{$PUBLIC_HOST} {
+  tls internal
   encode zstd gzip
 
   @graphql {
@@ -237,4 +276,4 @@ if command -v caddy >/dev/null 2>&1 && command -v setcap >/dev/null 2>&1; then
   fi
 fi
 
-say "Done. You can now run ./run.zsh"
+say "Done. You can now run ./run.zsh, ./run.zsh --https, or ./run.zsh --https-self-signed"

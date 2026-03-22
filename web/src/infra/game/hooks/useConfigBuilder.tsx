@@ -14,6 +14,23 @@ import { ClientConfig, Match } from '../types';
 
 type GameArgs = IGameArgs & { credentials?: TBgioSecret | null };
 
+function normalizeSameHostServerUrl(serverUrl: TBgioServerUrl) {
+  if (!serverUrl || typeof window === 'undefined') {
+    return serverUrl;
+  }
+
+  try {
+    const currentOrigin = window.location.origin;
+    const currentUrl = new URL(currentOrigin);
+    const targetUrl = new URL(serverUrl, currentOrigin);
+    if (targetUrl.host === currentUrl.host) {
+      return currentOrigin;
+    }
+  } catch {}
+
+  return serverUrl;
+}
+
 export function useConfigBuilder() {
   const [t] = useTranslation('Game');
 
@@ -109,7 +126,7 @@ export function useConfigBuilder() {
     const buildMultiplayer = (gameAIType) => {
       switch (mode) {
         case GameMode.OnlineFriend:
-          return SocketIO({ server: serverUrl });
+          return SocketIO({ server: normalizeSameHostServerUrl(serverUrl) });
         case GameMode.AI:
           return Local({ bots: { '0': gameAIType } });
       }

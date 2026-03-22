@@ -13,16 +13,23 @@ cd "$ROOT_DIR"
 DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/SurrealPictures/chosen_1}"
 
 USE_HTTPS="false"
+USE_HTTPS_SELF_SIGNED="false"
 for arg in "$@"; do
   case "$arg" in
     --https) USE_HTTPS="true" ;;
+    --https-self-signed) USE_HTTPS_SELF_SIGNED="true" ;;
     *)
       echo "Unknown arg: $arg" >&2
-      echo "Usage: ./run.zsh [--https]" >&2
+      echo "Usage: ./run.zsh [--https|--https-self-signed]" >&2
       exit 1
       ;;
   esac
 done
+
+if [[ "$USE_HTTPS" == "true" && "$USE_HTTPS_SELF_SIGNED" == "true" ]]; then
+  echo "Use only one of --https or --https-self-signed." >&2
+  exit 1
+fi
 
 if [[ -f .env.local ]]; then
   set -a
@@ -53,13 +60,17 @@ WEB_CMD="cd $ROOT_DIR/web; nvm-load || true; nvm use 16; NODE_ENV=${NODE_ENV:-pr
 PUBLIC_HOST_FALLBACK="fbg.lilf.ir"
 PUBLIC_HOST_EFFECTIVE="${PUBLIC_HOST:-$PUBLIC_HOST_FALLBACK}"
 PUBLIC_SCHEME="http"
-if [[ "$USE_HTTPS" == "true" ]]; then
+if [[ "$USE_HTTPS" == "true" || "$USE_HTTPS_SELF_SIGNED" == "true" ]]; then
   PUBLIC_SCHEME="https"
 fi
 PUBLIC_URL_EFFECTIVE="${PUBLIC_SCHEME}://${PUBLIC_HOST_EFFECTIVE}"
 BGIO_PUBLIC_DEFAULT="${BGIO_PUBLIC_SERVERS:-${PUBLIC_URL_EFFECTIVE}}"
+BGIO_ALLOWED_ORIGINS_DEFAULT="${BGIO_ALLOWED_ORIGINS:-${BGIO_PUBLIC_DEFAULT}}"
+if [[ "$USE_HTTPS_SELF_SIGNED" == "true" && -z "${BGIO_ALLOWED_ORIGINS:-}" ]]; then
+  BGIO_ALLOWED_ORIGINS_DEFAULT="http://${PUBLIC_HOST_EFFECTIVE},https://${PUBLIC_HOST_EFFECTIVE}"
+fi
 
-BGIO_CMD="cd $ROOT_DIR/web; nvm-load || true; nvm use 16; BGIO_PORT=${BGIO_PORT:-8001} BGIO_PUBLIC_SERVERS=${BGIO_PUBLIC_DEFAULT} BGIO_PRIVATE_SERVERS=${BGIO_PRIVATE_SERVERS:-http://127.0.0.1:8001} node server/dist/server_bgio.js"
+BGIO_CMD="cd $ROOT_DIR/web; nvm-load || true; nvm use 16; BGIO_PORT=${BGIO_PORT:-8001} BGIO_PUBLIC_SERVERS=${BGIO_PUBLIC_DEFAULT} BGIO_ALLOWED_ORIGINS=${BGIO_ALLOWED_ORIGINS_DEFAULT} BGIO_PRIVATE_SERVERS=${BGIO_PRIVATE_SERVERS:-http://127.0.0.1:8001} node server/dist/server_bgio.js"
 
 BACKEND_NODE_ENV="${NODE_ENV:-production}"
 if [[ -z "${FBG_REDIS_HOST:-}" || -z "${FBG_REDIS_PORT:-}" ]]; then
@@ -77,6 +88,8 @@ BACKEND_CMD="export CODENAMES_PICTURES_DIR=${CODENAMES_PICTURES_DIR:-$DEFAULT_CO
 CADDY_CONFIG="$ROOT_DIR/caddy_config_http"
 if [[ "$USE_HTTPS" == "true" ]]; then
   CADDY_CONFIG="$ROOT_DIR/caddy_config"
+elif [[ "$USE_HTTPS_SELF_SIGNED" == "true" ]]; then
+  CADDY_CONFIG="$ROOT_DIR/caddy_config_self_signed"
 fi
 CADDY_CMD="cd $ROOT_DIR; caddy run --config $CADDY_CONFIG --adapter caddyfile"
 
