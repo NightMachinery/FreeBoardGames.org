@@ -161,3 +161,4 @@ http://pinky.lilf.ir:3000
 - If you later want a Redis-backed production backend, set `BACKEND_NODE_ENV=production` and add the Redis env vars before starting.
 - HTTPS/Caddy scripts still use `.env.local`; this HTTP workflow reads `.env.http.local`.
 - If you want to keep plain HTTP available **and** add self-signed HTTPS on the same host, use the tmux+Caddy flow from `selfhost.md` and run `./run.zsh --https-self-signed`.
+- If you are using `run_tmux_http.zsh` with `~/Caddyfile`, you can now also run `./run_tmux_http.zsh enable-caddy-self-signed fbg.pinky.lilf.ir` to add both HTTP and self-signed HTTPS to that Caddyfile and restart the app sessions with matching BGIO origin settings.

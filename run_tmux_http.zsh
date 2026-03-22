@@ -13,6 +13,10 @@ DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/Sur
 CADDYFILE_PATH="${CADDYFILE_PATH:-$HOME/Caddyfile}"
 CADDY_BLOCK_BEGIN="# BEGIN freeboardgames http self-host"
 CADDY_BLOCK_END="# END freeboardgames http self-host"
+CADDY_GLOBAL_BLOCK_BEGIN="# BEGIN freeboardgames http self-host global"
+CADDY_GLOBAL_BLOCK_END="# END freeboardgames http self-host global"
+CADDY_GLOBAL_OPTION_BEGIN="# BEGIN freeboardgames http self-host global option"
+CADDY_GLOBAL_OPTION_END="# END freeboardgames http self-host global option"
 
 SESSION_WEB="fbg-http-web"
 SESSION_BGIO="fbg-http-bgio"
@@ -76,6 +80,7 @@ BGIO_PORT=8001
 FBG_BACKEND_TARGET=http://127.0.0.1:3001
 BGIO_PRIVATE_SERVERS=http://127.0.0.1:8001
 BGIO_PUBLIC_SERVERS=http://$host
+BGIO_ALLOWED_ORIGINS=http://$host
 CHANNEL=production
 FORCE_DB_SYNC=true
 JWT_SECRET=$jwt_secret
@@ -101,6 +106,7 @@ load_repo_env() {
   export FBG_BACKEND_TARGET="${FBG_BACKEND_TARGET:-http://127.0.0.1:3001}"
   export BGIO_PRIVATE_SERVERS="${BGIO_PRIVATE_SERVERS:-http://127.0.0.1:8001}"
   export BGIO_PUBLIC_SERVERS="${BGIO_PUBLIC_SERVERS:-${PUBLIC_URL}}"
+  export BGIO_ALLOWED_ORIGINS="${BGIO_ALLOWED_ORIGINS:-${BGIO_PUBLIC_SERVERS}}"
   export CHANNEL="${CHANNEL:-production}"
   export FORCE_DB_SYNC="${FORCE_DB_SYNC:-true}"
   export JWT_SECRET="${JWT_SECRET:-unsafe-change-me}"
@@ -147,29 +153,63 @@ PY
 
 sync_caddy_env() {
   local host="$1"
+  local mode="${2:-http}"
   [[ -f "$ENV_FILE" ]] || die "Missing $ENV_FILE. Run ./run_tmux_http.zsh env-init first."
 
   set_env_value "$ENV_FILE" "PUBLIC_HOST" "$host"
+  if [[ "$mode" == "self-signed" ]]; then
+    set_env_value "$ENV_FILE" "PUBLIC_URL" "https://$host"
+    set_env_value "$ENV_FILE" "BGIO_PUBLIC_SERVERS" "https://$host"
+    set_env_value "$ENV_FILE" "BGIO_ALLOWED_ORIGINS" "http://$host,https://$host"
+    say "Updated $ENV_FILE for http://$host and https://$host"
+    return
+  fi
+
   set_env_value "$ENV_FILE" "PUBLIC_URL" "http://$host"
   set_env_value "$ENV_FILE" "BGIO_PUBLIC_SERVERS" "http://$host"
+  set_env_value "$ENV_FILE" "BGIO_ALLOWED_ORIGINS" "http://$host"
 
   say "Updated $ENV_FILE for http://$host"
 }
 
 write_caddy_block() {
   local host="$1"
+  local mode="${2:-http}"
 
-  python3 - "$CADDYFILE_PATH" "$host" "$CADDY_BLOCK_BEGIN" "$CADDY_BLOCK_END" <<'PY'
+  python3 - "$CADDYFILE_PATH" "$host" "$mode" "$CADDY_BLOCK_BEGIN" "$CADDY_BLOCK_END" "$CADDY_GLOBAL_BLOCK_BEGIN" "$CADDY_GLOBAL_BLOCK_END" "$CADDY_GLOBAL_OPTION_BEGIN" "$CADDY_GLOBAL_OPTION_END" <<'PY'
 from pathlib import Path
 import sys
 
 path = Path(sys.argv[1]).expanduser()
 host = sys.argv[2]
-start = sys.argv[3]
-end = sys.argv[4]
+mode = sys.argv[3]
+start = sys.argv[4]
+end = sys.argv[5]
+global_start = sys.argv[6]
+global_end = sys.argv[7]
+global_option_start = sys.argv[8]
+global_option_end = sys.argv[9]
 
-block = f"""{start}
-http://{host} {{
+site_block_http = f"""http://{host} {{
+\tencode zstd gzip
+
+\t@graphql {{
+\t\tpath /graphql*
+\t}}
+\t@bgio {{
+\t\tpath /socket.io* /games/*
+\t}}
+\treverse_proxy @graphql 127.0.0.1:3001
+\treverse_proxy @bgio 127.0.0.1:8001
+\treverse_proxy 127.0.0.1:3000
+}}"""
+
+if mode == "self-signed":
+    managed_site_block = f"""{start}
+{site_block_http}
+
+https://{host} {{
+\ttls internal
 \tencode zstd gzip
 
 \t@graphql {{
@@ -184,6 +224,57 @@ http://{host} {{
 }}
 {end}
 """
+else:
+    managed_site_block = f"""{start}
+{site_block_http}
+{end}
+"""
+
+managed_global_block = f"""{global_start}
+{{
+\tauto_https disable_redirects
+}}
+{global_end}
+"""
+
+managed_global_option = f"""\t{global_option_start}
+\tauto_https disable_redirects
+\t{global_option_end}
+"""
+
+def remove_marked_block(text: str, begin: str, finish: str) -> str:
+    if begin in text and finish in text:
+        start_idx = text.index(begin)
+        end_idx = text.index(finish, start_idx) + len(finish)
+        text = text[:start_idx] + text[end_idx:]
+    return text
+
+def find_global_block(text: str):
+    lines = text.splitlines(True)
+    offset = 0
+    index = 0
+
+    while index < len(lines):
+        stripped = lines[index].strip()
+        if not stripped or stripped.startswith('#'):
+            offset += len(lines[index])
+            index += 1
+            continue
+        break
+
+    if offset >= len(text) or text[offset] != '{':
+        return None
+
+    depth = 0
+    for pos in range(offset, len(text)):
+        char = text[pos]
+        if char == '{':
+            depth += 1
+        elif char == '}':
+            depth -= 1
+            if depth == 0:
+                return offset, pos + 1
+    return None
 
 path.parent.mkdir(parents=True, exist_ok=True)
 try:
@@ -191,16 +282,30 @@ try:
 except FileNotFoundError:
     text = ""
 
-if start in text and end in text:
-    start_idx = text.index(start)
-    end_idx = text.index(end, start_idx) + len(end)
-    new_text = text[:start_idx] + block + text[end_idx:]
-else:
-    trimmed = text.rstrip()
-    if trimmed:
-        new_text = trimmed + "\n\n" + block
+text = remove_marked_block(text, global_option_start, global_option_end)
+text = remove_marked_block(text, global_start, global_end)
+text = remove_marked_block(text, start, end)
+
+if mode == "self-signed":
+    global_block = find_global_block(text)
+    if global_block:
+        block_start, block_end = global_block
+        block = text[block_start:block_end]
+        if block.rstrip().endswith("}"):
+            block = block[:-1].rstrip() + "\n" + managed_global_option + "\n}\n"
+        text = text[:block_start] + block + text[block_end:]
     else:
-        new_text = block
+        trimmed = text.lstrip()
+        if trimmed:
+            text = managed_global_block + "\n" + trimmed
+        else:
+            text = managed_global_block + "\n"
+
+trimmed = text.rstrip()
+if trimmed:
+    new_text = trimmed + "\n\n" + managed_site_block
+else:
+    new_text = managed_site_block
 
 if not new_text.endswith("\n"):
     new_text += "\n"
@@ -208,7 +313,11 @@ if not new_text.endswith("\n"):
 path.write_text(new_text)
 PY
 
-  say "Updated $CADDYFILE_PATH for http://$host"
+  if [[ "$mode" == "self-signed" ]]; then
+    say "Updated $CADDYFILE_PATH for http://$host and https://$host"
+  else
+    say "Updated $CADDYFILE_PATH for http://$host"
+  fi
 }
 
 reload_or_start_caddy() {
@@ -253,8 +362,18 @@ enable_caddy() {
   local host
   host="$(normalize_host "${1:-$DEFAULT_CADDY_HOST}")"
 
-  sync_caddy_env "$host"
-  write_caddy_block "$host"
+  sync_caddy_env "$host" "http"
+  write_caddy_block "$host" "http"
+  reload_or_start_caddy
+  restart_app_if_running
+}
+
+enable_caddy_self_signed() {
+  local host
+  host="$(normalize_host "${1:-$DEFAULT_CADDY_HOST}")"
+
+  sync_caddy_env "$host" "self-signed"
+  write_caddy_block "$host" "self-signed"
   reload_or_start_caddy
   restart_app_if_running
 }
@@ -358,7 +477,7 @@ start_sessions() {
   WEB_CMD="${PROXY_EXPORTS} cd ${(q)ROOT_DIR}/web; nvm-load; nvm use ${(q)NODE_VERSION}; NODE_ENV=${(q)WEB_NODE_ENV} CHANNEL=${(q)CHANNEL} SERVER_PORT=${(q)SERVER_PORT} FBG_BACKEND_TARGET=${(q)FBG_BACKEND_TARGET} BGIO_PRIVATE_SERVERS=${(q)BGIO_PRIVATE_SERVERS} node server/dist/server_web.js"
 
   local BGIO_CMD
-  BGIO_CMD="${PROXY_EXPORTS} cd ${(q)ROOT_DIR}/web; nvm-load; nvm use ${(q)NODE_VERSION}; BGIO_PORT=${(q)BGIO_PORT} BGIO_PUBLIC_SERVERS=${(q)BGIO_PUBLIC_SERVERS} BGIO_PRIVATE_SERVERS=${(q)BGIO_PRIVATE_SERVERS} node server/dist/server_bgio.js"
+  BGIO_CMD="${PROXY_EXPORTS} cd ${(q)ROOT_DIR}/web; nvm-load; nvm use ${(q)NODE_VERSION}; BGIO_PORT=${(q)BGIO_PORT} BGIO_PUBLIC_SERVERS=${(q)BGIO_PUBLIC_SERVERS} BGIO_ALLOWED_ORIGINS=${(q)BGIO_ALLOWED_ORIGINS} BGIO_PRIVATE_SERVERS=${(q)BGIO_PRIVATE_SERVERS} node server/dist/server_bgio.js"
 
   local BACKEND_CMD
   BACKEND_CMD="${PROXY_EXPORTS} cd ${(q)ROOT_DIR}/fbg-server; nvm-load; nvm use ${(q)NODE_VERSION}; NODE_ENV=${(q)BACKEND_NODE_ENV} FORCE_DB_SYNC=${(q)FORCE_DB_SYNC} JWT_SECRET=${(q)JWT_SECRET} BGIO_PRIVATE_SERVERS=${(q)BGIO_PRIVATE_SERVERS} BGIO_PUBLIC_SERVERS=${(q)BGIO_PUBLIC_SERVERS} node dist/main.js"
@@ -439,6 +558,9 @@ main() {
     enable-caddy)
       enable_caddy "${2:-$DEFAULT_CADDY_HOST}"
       ;;
+    enable-caddy-self-signed)
+      enable_caddy_self_signed "${2:-$DEFAULT_CADDY_HOST}"
+      ;;
     status)
       status_sessions
       ;;
@@ -449,7 +571,7 @@ main() {
       show_logs "${2:-}"
       ;;
     *)
-      die "Usage: ./run_tmux_http.zsh [env-init [host:port]|install|start|stop|restart|enable-caddy [host]|status|attach <web|bgio|backend>|logs <web|bgio|backend>]"
+      die "Usage: ./run_tmux_http.zsh [env-init [host:port]|install|start|stop|restart|enable-caddy [host]|enable-caddy-self-signed [host]|status|attach <web|bgio|backend>|logs <web|bgio|backend>]"
       ;;
   esac
 }
