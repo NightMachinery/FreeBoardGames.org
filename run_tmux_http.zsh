@@ -10,6 +10,7 @@ ENV_FILE="${ENV_FILE:-$ROOT_DIR/.env.http.local}"
 DEFAULT_PUBLIC_HOST="${DEFAULT_PUBLIC_HOST:-pinky.lilf.ir:3000}"
 DEFAULT_CADDY_HOST="${DEFAULT_CADDY_HOST:-fbg.pinky.lilf.ir}"
 DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/SurrealPictures/chosen_1}"
+DEFAULT_FBG_IMAGES_CACHE_DIR="${DEFAULT_FBG_IMAGES_CACHE_DIR:-~/.cache/talespin/cards}"
 CADDYFILE_PATH="${CADDYFILE_PATH:-$HOME/Caddyfile}"
 CADDY_BLOCK_BEGIN="# BEGIN freeboardgames http self-host"
 CADDY_BLOCK_END="# END freeboardgames http self-host"
@@ -84,6 +85,7 @@ BGIO_ALLOWED_ORIGINS=http://$host
 CHANNEL=production
 FORCE_DB_SYNC=true
 JWT_SECRET=$jwt_secret
+FBG_IMAGES_CACHE_DIR=$DEFAULT_FBG_IMAGES_CACHE_DIR
 WEB_NODE_ENV=production
 BACKEND_NODE_ENV=development
 CODENAMES_PICTURES_DIR=$DEFAULT_CODENAMES_PICTURES_DIR
@@ -113,6 +115,13 @@ load_repo_env() {
   export WEB_NODE_ENV="${WEB_NODE_ENV:-production}"
   export BACKEND_NODE_ENV="${BACKEND_NODE_ENV:-development}"
   export CODENAMES_PICTURES_DIR="${CODENAMES_PICTURES_DIR:-$DEFAULT_CODENAMES_PICTURES_DIR}"
+  export FBG_IMAGES_CACHE_DIR="${FBG_IMAGES_CACHE_DIR:-$DEFAULT_FBG_IMAGES_CACHE_DIR}"
+}
+
+warn_missing_picture_tools() {
+  if ! command -v avifenc >/dev/null 2>&1 || ! command -v convert >/dev/null 2>&1; then
+    say "Warning: Secret Codes picture mode now expects avifenc + convert on the host."
+  fi
 }
 
 set_env_value() {
@@ -462,12 +471,14 @@ tmux_env_exports() {
 export ALL_PROXY=http://127.0.0.1:1087 all_proxy=http://127.0.0.1:1087 http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087 HTTP_PROXY=http://127.0.0.1:1087 HTTPS_PROXY=http://127.0.0.1:1087;
 export NO_PROXY=127.0.0.1,localhost no_proxy=127.0.0.1,localhost;
 export CODENAMES_PICTURES_DIR=${(q)CODENAMES_PICTURES_DIR};
+export FBG_IMAGES_CACHE_DIR=${(q)FBG_IMAGES_CACHE_DIR};
 EOF
 }
 
 start_sessions() {
   ensure_tmux
   load_repo_env
+  warn_missing_picture_tools
   ensure_build_artifacts
 
   local PROXY_EXPORTS

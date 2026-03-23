@@ -10,6 +10,7 @@ ROOT_DIR=$(cd "$(dirname "$0")" && pwd)
 cd "$ROOT_DIR"
 
 DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/SurrealPictures/chosen_1}"
+DEFAULT_FBG_IMAGES_CACHE_DIR="${DEFAULT_FBG_IMAGES_CACHE_DIR:-~/.cache/talespin/cards}"
 
 say() { print -r -- "$@"; }
 
@@ -93,6 +94,7 @@ FBG_REDIS_HOST=127.0.0.1
 FBG_REDIS_PORT=6379
 FBG_REDIS_PASSWORD=
 BGIO_ALLOWED_ORIGINS=
+FBG_IMAGES_CACHE_DIR=${DEFAULT_FBG_IMAGES_CACHE_DIR}
 NODE_ENV=production
 CHANNEL=production
 FORCE_DB_SYNC=true
@@ -122,6 +124,9 @@ else
   fi
   if ! grep -q "^CODENAMES_PICTURES_DIR=" .env.local; then
     set_env_var .env.local "CODENAMES_PICTURES_DIR" "${DEFAULT_CODENAMES_PICTURES_DIR}"
+  fi
+  if ! grep -q "^FBG_IMAGES_CACHE_DIR=" .env.local; then
+    set_env_var .env.local "FBG_IMAGES_CACHE_DIR" "${DEFAULT_FBG_IMAGES_CACHE_DIR}"
   fi
 fi
 
@@ -222,7 +227,7 @@ if command -v apt-get >/dev/null 2>&1; then
     say "Fix /etc/apt/sources.list.d/*.list and rerun to install Caddy/tmux."
   fi
 
-  if ! sudo apt-get install -y tmux debian-keyring debian-archive-keyring apt-transport-https curl gnupg libcap2-bin; then
+  if ! sudo apt-get install -y tmux debian-keyring debian-archive-keyring apt-transport-https curl gnupg libcap2-bin imagemagick libavif-bin; then
     say "Warning: failed to install tmux/curl/gnupg. Continuing without them."
   fi
 

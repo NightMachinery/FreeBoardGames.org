@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import next from 'next';
 import express from 'express';
+import fs from 'fs';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import csurf from 'csurf';
 import cookieParser from 'cookie-parser';
@@ -83,25 +84,38 @@ app
     setupLogging(server, 'fbg-web');
 
     server.get('/secretcodes/pictures/catalog', async (req, res) => {
-      const catalog = await getSecretcodesPicturesCatalog();
-      res.json({
-        enabled: catalog.enabled,
-        available: catalog.available,
-        count: catalog.count,
-        imageIds: catalog.imageIds,
-      });
+      try {
+        const catalog = await getSecretcodesPicturesCatalog();
+        res.json({
+          enabled: catalog.enabled,
+          available: catalog.available,
+          count: catalog.count,
+          imageIds: catalog.imageIds,
+        });
+      } catch (error) {
+        console.error('Failed to build Secret Codes pictures catalog:', error);
+        res.sendStatus(500);
+      }
     });
 
     server.get('/secretcodes/pictures/image/:imageId', async (req, res) => {
-      const catalog = await getSecretcodesPicturesCatalog();
-      const imageId = req.params.imageId;
-      const entry = catalog.entriesById.get(imageId);
-      if (!entry) {
-        res.sendStatus(404);
-        return;
-      }
+      try {
+        const catalog = await getSecretcodesPicturesCatalog();
+        const imageId = req.params.imageId;
+        const entry = catalog.entriesById.get(imageId);
+        if (!entry) {
+          res.sendStatus(404);
+          return;
+        }
 
-      res.sendFile(entry.absolutePath);
+        const bytes = await fs.promises.readFile(entry.cachePath);
+        res.set('Content-Type', entry.contentType);
+        res.set('Cache-Control', 'public, max-age=31536000, immutable');
+        res.send(bytes);
+      } catch (error) {
+        console.error('Failed to serve Secret Codes picture:', error);
+        res.sendStatus(404);
+      }
     });
 
     server.get('/.well-known/assetlinks.json', (req, res) => {
