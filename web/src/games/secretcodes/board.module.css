@@ -13,7 +13,9 @@
 }
 
 .boardPictures {
+  --pictures-columns: 5;
   align-items: stretch;
+  grid-template-columns: repeat(var(--pictures-columns), minmax(0, 1fr));
   grid-template-rows: none;
 }
 
@@ -30,6 +32,7 @@ button.playActionBtn {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 
   /* vw - 2 * margin-l + margin-r - all grid-gap / card columns*/
   height: calc((100vw - 1.6rem - 2rem) / 5);
@@ -37,7 +40,7 @@ button.playActionBtn {
   padding: 0.2rem;
 
   border-radius: 3px;
-  box-shadow: 0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   box-sizing: border-box;
   overflow: hidden;
 
@@ -45,7 +48,7 @@ button.playActionBtn {
   hyphens: auto;
   font-size: 14px;
   color: black;
-  fill: #50514F;
+  fill: #50514f;
   word-break: break-all;
   background-color: #f7f7f7;
 
@@ -54,7 +57,7 @@ button.playActionBtn {
 }
 
 .card:not(.cardRevealed):hover {
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transform: scale(1.03);
   cursor: pointer;
 }
@@ -65,7 +68,7 @@ button.playActionBtn {
   background-color: #fff;
   color: transparent;
   fill: transparent;
-  height: calc(((100vw - 1.6rem - 2rem) / 5) * 1.5);
+  height: calc(((100vw - 1.6rem - 2rem) / var(--pictures-columns, 5)) * 1.5);
   max-height: 150px;
 }
 
@@ -81,39 +84,39 @@ button.playActionBtn {
   display: inline;
   padding: 8px;
   border-radius: 3px;
-  background-color: #F25F5C;
+  background-color: #f25f5c;
 }
 
 .blueTitle {
   display: inline;
   padding: 8px;
   border-radius: 3px;
-  background-color: #247BA0;
+  background-color: #247ba0;
 }
 
 .cardBlue {
-  background-color: #247BA0;
+  background-color: #247ba0;
   fill: #fff;
 }
 
 .cardPictures.cardBlue {
   background-color: #fff;
-  border-color: #247BA0;
+  border-color: #247ba0;
 }
 
 .cardRed {
-  background-color: #F25F5C;
+  background-color: #f25f5c;
   fill: #fff;
 }
 
 .cardPictures.cardRed {
   background-color: #fff;
-  border-color: #F25F5C;
+  border-color: #f25f5c;
 }
 
 .cardCivilian {
   background-color: beige;
-  fill: #50514F;
+  fill: #50514f;
 }
 
 .cardPictures.cardCivilian {
@@ -122,21 +125,21 @@ button.playActionBtn {
 }
 
 .cardAssassin {
-  background-color: #50514F;
+  background-color: #50514f;
   fill: #fff;
 }
 
 .cardPictures.cardAssassin {
   background-color: #fff;
-  border-color: #50514F;
+  border-color: #50514f;
 }
 
 .cardLastSelected {
-  box-shadow: inset 0 0 0 3px palegreen, 0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06);
+  box-shadow: inset 0 0 0 3px palegreen, 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .cardPictures.cardLastSelected {
-  box-shadow: inset 0 0 0 3px palegreen, 0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06);
+  box-shadow: inset 0 0 0 3px palegreen, 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .cardRevealedSpymasterView {
@@ -154,6 +157,36 @@ button.playActionBtn {
   padding: 0.5rem;
   color: #111;
   word-break: break-word;
+}
+
+.cardIndexBadge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.pictureControls {
+  margin: 0 auto 1rem;
+  max-width: 420px;
+}
+
+.pictureControlLabel {
+  margin: 0 0 0.35rem;
+  text-align: center;
 }
 
 .pictureStatus {

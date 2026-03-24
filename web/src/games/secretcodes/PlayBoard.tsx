@@ -5,6 +5,7 @@ import * as React from 'react';
 import css from './board.module.css';
 import { isLocalGame } from 'gamesShared/helpers/gameMode';
 import Button from '@material-ui/core/Button';
+import Slider from '@material-ui/core/Slider';
 import {
   canPlayerGuessCurrentTeam,
   getCurrentTeam,
@@ -40,6 +41,48 @@ interface IPlayBoardState {
   picturesLoaded: boolean;
   picturesAvailable: boolean;
   pictureImageIds: string[];
+  pictureCardsPerRow: number;
+}
+
+const DEFAULT_PICTURE_CARDS_PER_ROW = 5;
+const MIN_PICTURE_CARDS_PER_ROW = 3;
+const MAX_PICTURE_CARDS_PER_ROW = 10;
+const PICTURE_CARDS_PER_ROW_STORAGE_KEY = 'secretcodesPicturesCardsPerRow';
+
+function clampPictureCardsPerRow(value: unknown): number {
+  const parsedValue = Number(value);
+  if (!Number.isFinite(parsedValue)) {
+    return DEFAULT_PICTURE_CARDS_PER_ROW;
+  }
+
+  return Math.min(MAX_PICTURE_CARDS_PER_ROW, Math.max(MIN_PICTURE_CARDS_PER_ROW, Math.round(parsedValue)));
+}
+
+function loadPictureCardsPerRowPreference(): number {
+  if (typeof window === 'undefined') {
+    return DEFAULT_PICTURE_CARDS_PER_ROW;
+  }
+
+  try {
+    const storedValue = localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY);
+    if (storedValue === null) {
+      return DEFAULT_PICTURE_CARDS_PER_ROW;
+    }
+
+    return clampPictureCardsPerRow(JSON.parse(storedValue));
+  } catch {
+    return DEFAULT_PICTURE_CARDS_PER_ROW;
+  }
+}
+
+function persistPictureCardsPerRowPreference(value: number) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    localStorage.setItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY, JSON.stringify(clampPictureCardsPerRow(value)));
+  } catch {}
 }
 
 export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IPlayBoardOutterProps, IPlayBoardState> {
@@ -48,9 +91,14 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     picturesLoaded: !this.props.G.picturesMode,
     picturesAvailable: !this.props.G.picturesMode,
     pictureImageIds: [],
+    pictureCardsPerRow: DEFAULT_PICTURE_CARDS_PER_ROW,
   };
 
   componentDidMount() {
+    const pictureCardsPerRow = loadPictureCardsPerRowPreference();
+    if (pictureCardsPerRow !== this.state.pictureCardsPerRow) {
+      this.setState({ pictureCardsPerRow });
+    }
     this._loadPicturesIfNeeded();
   }
 
@@ -85,6 +133,12 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
   _toggleSpymasterView = (): void => this.setState({ spymasterView: !this.state.spymasterView });
 
   _canGuess = (): boolean => canPlayerGuessCurrentTeam(this.props.G, this.props.ctx, this._playerID());
+
+  _setPictureCardsPerRow = (_: unknown, newValue: number | number[]) => {
+    const pictureCardsPerRow = clampPictureCardsPerRow(Array.isArray(newValue) ? newValue[0] : newValue);
+    persistPictureCardsPerRowPreference(pictureCardsPerRow);
+    this.setState({ pictureCardsPerRow });
+  };
 
   _chooseCard = (cardIndex: number) => {
     if (!this._isActive()) return;
@@ -157,9 +211,19 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
       if (spymasterNames) {
         spymasterInstructions =
           currentTeam.spymasterIDs.length > 1 ? (
-            <>{this.props.translate('spymasters_give_clue', { names: spymasterNames })}</>
+            <Trans
+              t={this.props.translate}
+              i18nKey="spymasters_give_clue"
+              values={{ names: spymasterNames }}
+              components={{ strong: <strong /> }}
+            />
           ) : (
-            <>{this.props.translate('spymaster_give_clue', { name: spymasterNames })}</>
+            <Trans
+              t={this.props.translate}
+              i18nKey="spymaster_give_clue"
+              values={{ name: spymasterNames }}
+              components={{ strong: <strong /> }}
+            />
           );
       }
     }
@@ -200,14 +264,41 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     return <span className={css.cardFallbackWord}>{card.word}</span>;
   };
 
+  _renderPictureControls = () => {
+    if (!this.props.G.picturesMode) {
+      return null;
+    }
+
+    return (
+      <div className={css.pictureControls}>
+        <p className={css.pictureControlLabel}>
+          {this.props.translate('pictures_mode_images_per_row')} {this.state.pictureCardsPerRow}
+        </p>
+        <Slider
+          data-testid="pictures-cards-per-row-slider"
+          value={this.state.pictureCardsPerRow}
+          min={MIN_PICTURE_CARDS_PER_ROW}
+          max={MAX_PICTURE_CARDS_PER_ROW}
+          step={1}
+          valueLabelDisplay="auto"
+          onChange={this._setPictureCardsPerRow}
+          aria-label={this.props.translate('pictures_mode_images_per_row')}
+        />
+      </div>
+    );
+  };
+
   _renderCardGrid = () => {
-    let board = [];
+    const board = [];
     const boardClasses = [css.board];
+    const boardStyle = this.props.G.picturesMode
+      ? ({ ['--pictures-columns' as '--pictures-columns']: this.state.pictureCardsPerRow } as React.CSSProperties)
+      : undefined;
     if (this.props.G.picturesMode) {
       boardClasses.push(css.boardPictures);
     }
 
-    for (let i = 0; i < 25; i += 1) {
+    for (let i = 0; i < this.props.G.cards.length; i += 1) {
       const card = this.props.G.cards[i];
 
       const classes = [css.card];
@@ -231,12 +322,21 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
       board.push(
         <div className={classes.join(' ')} key={i} onClick={() => this._chooseCard(i)}>
+          {this.props.G.picturesMode ? (
+            <span className={css.cardIndexBadge} data-testid={`picture-card-badge-${i + 1}`}>
+              {i + 1}
+            </span>
+          ) : null}
           {this._renderCardContent(i)}
         </div>,
       );
     }
 
-    return <div className={boardClasses.join(' ')}>{board}</div>;
+    return (
+      <div className={boardClasses.join(' ')} style={boardStyle}>
+        {board}
+      </div>
+    );
   };
 
   _renderPlayerBadges = () => {
@@ -276,17 +376,24 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     }
   };
 
+  _renderPictureSection = () => (
+    <>
+      {this.props.G.picturesMode && this.state.picturesLoaded && !this.state.picturesAvailable ? (
+        <p className={css.pictureStatus}>{this.props.translate('pictures_mode_unavailable')}</p>
+      ) : null}
+      {this._renderPictureControls()}
+      {this._renderCardGrid()}
+    </>
+  );
+
   render() {
     if (this.props.isGameOver) {
-      return this._renderCardGrid();
+      return this._renderPictureSection();
     }
     return (
       <div>
         {this._renderHeader()}
-        {this.props.G.picturesMode && this.state.picturesLoaded && !this.state.picturesAvailable ? (
-          <p className={css.pictureStatus}>{this.props.translate('pictures_mode_unavailable')}</p>
-        ) : null}
-        {this._renderCardGrid()}
+        {this._renderPictureSection()}
         {this._renderActionButtons()}
         {this._renderPlayerBadges()}
       </div>

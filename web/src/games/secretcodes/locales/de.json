@@ -14,6 +14,7 @@
   "custom": "Benutzerdefiniert",
   "black_cards": "Schwarze Karten",
   "pictures_mode": "Bildermodus",
+  "pictures_mode_images_per_row": "Bilder pro Zeile",
   "pictures_mode_loading": "Bildermodus-Ressourcen werden geladen...",
   "pictures_mode_requires_images": "Der Bildermodus benötigt mindestens 25 Bilder in CODENAMES_PICTURES_DIR (gefunden: {{ count }}).",
   "pictures_mode_unavailable": "Bildermodus-Ressourcen sind nicht verfügbar.",

@@ -14,6 +14,7 @@
   "custom": "Personalizado",
   "black_cards": "Cartas pretas",
   "pictures_mode": "Modo com imagens",
+  "pictures_mode_images_per_row": "Imagens por linha",
   "pictures_mode_loading": "Carregando recursos do modo com imagens...",
   "pictures_mode_requires_images": "O modo com imagens precisa de pelo menos 25 imagens em CODENAMES_PICTURES_DIR (encontradas: {{ count }}).",
   "pictures_mode_unavailable": "Os recursos do modo com imagens não estão disponíveis.",
