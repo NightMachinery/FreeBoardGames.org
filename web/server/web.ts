@@ -3,12 +3,17 @@ import 'dotenv/config';
 import next from 'next';
 import express from 'express';
 import fs from 'fs';
+import path from 'path';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import csurf from 'csurf';
 import cookieParser from 'cookie-parser';
 import { setupLogging } from './logging';
 import { generateSiteMapXML } from './sitemap';
-import { getSecretcodesPicturesCatalog } from './secretcodesPictures';
+import {
+  getSecretcodesPicturesCatalog,
+  ISecretcodesPicturesProgressEvent,
+  warmSecretcodesPicturesCatalog,
+} from './secretcodesPictures';
 
 const INTERNAL_BACKEND_TARGET = process.env.FBG_BACKEND_TARGET || 'http://localhost:3001';
 const INTERNAL_BGIO_TARGET =
@@ -170,6 +175,10 @@ app
       return handle(req, res);
     });
 
+    void warmSecretcodesPicturesCatalog(logSecretcodesPicturesProgress).catch((error) => {
+      console.error('Secret Codes picture warmup failed at startup:', error);
+    });
+
     const httpServer = server.listen(PORT, () => {
       console.log(`Listening on http://0.0.0.0:${PORT}`);
     });
@@ -205,4 +214,50 @@ function firstUrl(rawServers: string | undefined, fallback: string) {
     .map((server) => server.trim())
     .find(Boolean);
   return firstServer || fallback;
+}
+
+function logSecretcodesPicturesProgress(event: ISecretcodesPicturesProgressEvent) {
+  const prefix = '[Secret Codes pictures]';
+  switch (event.type) {
+    case 'start':
+      console.log(
+        `${prefix} startup warmup started` +
+          (event.rootDir ? ` (root: ${event.rootDir})` : '') +
+          (event.cacheDir ? ` (cache: ${event.cacheDir})` : ''),
+      );
+      return;
+    case 'discovered':
+      console.log(
+        `${prefix} discovered ${event.sourceCount ?? 0} source image${event.sourceCount === 1 ? '' : 's'}${
+          event.rootDir ? ` in ${event.rootDir}` : ''
+        }`,
+      );
+      return;
+    case 'image': {
+      const progressPrefix = event.current && event.total ? `${prefix} ${event.current}/${event.total}` : prefix;
+      const sourceName = event.sourcePath ? path.basename(event.sourcePath) : '<unknown>';
+      if (event.action === 'skipped') {
+        console.error(`${progressPrefix} skipped ${sourceName}: ${event.error || 'unknown error'}`);
+        return;
+      }
+      console.log(`${progressPrefix} ${event.action} ${sourceName}`);
+      return;
+    }
+    case 'summary': {
+      const elapsedSeconds = ((event.elapsedMs || 0) / 1000).toFixed(1);
+      if (!event.enabled) {
+        console.log(`${prefix} warmup disabled (${elapsedSeconds}s)`);
+        return;
+      }
+      console.log(
+        `${prefix} ready in ${elapsedSeconds}s: ${event.uniqueCount ?? 0} unique image${
+          event.uniqueCount === 1 ? '' : 's'
+        } (${event.available ? 'available' : 'unavailable'}). ` +
+          `hits=${event.cacheHitCount ?? 0} built=${event.builtCount ?? 0} rebuilt=${
+            event.rebuiltCount ?? 0
+          } duplicates=${event.duplicateCount ?? 0} skipped=${event.skippedCount ?? 0}`,
+      );
+      return;
+    }
+  }
 }

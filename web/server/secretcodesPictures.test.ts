@@ -8,8 +8,10 @@ import { promisify } from 'util';
 import {
   buildSecretcodesPicturesCatalog,
   expandHomeDir,
+  ISecretcodesPicturesProgressEvent,
   resetSecretcodesPicturesCatalogCache,
   resolveSecretcodesPicturesCacheDir,
+  warmSecretcodesPicturesCatalog,
 } from './secretcodesPictures';
 
 const execFileAsync = promisify(execFile);
@@ -322,6 +324,112 @@ describeWithNativeTools('secretcodesPictures native cache pipeline', () => {
       expect(catalog.imageIds).toHaveLength(25);
       expect(fs.readdirSync(tmpCacheDir).filter((value) => value.endsWith('.avif'))).toHaveLength(25);
     } finally {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+      fs.rmSync(tmpCacheDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should emit startup progress events while catalog images are processed', async () => {
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'secretcodes-pictures-'));
+    const tmpCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'secretcodes-cache-'));
+    await makeImages(tmpRoot, 2);
+    const sourcePaths = Array.from({ length: 2 }, (_, index) => path.join(tmpRoot, `image-${index}.png`));
+    await warmCacheWithSingleEncodedSample(sourcePaths, tmpCacheDir);
+    const progressEvents: ISecretcodesPicturesProgressEvent[] = [];
+
+    try {
+      const catalog = await buildSecretcodesPicturesCatalog(tmpRoot, tmpCacheDir, {
+        onProgress: (event) => progressEvents.push(event),
+      });
+
+      expect(catalog.count).toEqual(2);
+      expect(progressEvents[0]).toMatchObject({
+        type: 'start',
+        rootDir: tmpRoot,
+        cacheDir: tmpCacheDir,
+      });
+      expect(progressEvents[1]).toMatchObject({
+        type: 'discovered',
+        rootDir: tmpRoot,
+        cacheDir: tmpCacheDir,
+        sourceCount: 2,
+      });
+      expect(progressEvents[2]).toMatchObject({
+        type: 'image',
+        current: 1,
+        total: 2,
+        sourcePath: sourcePaths[0],
+        action: 'cache-hit',
+      });
+      expect(progressEvents[3]).toMatchObject({
+        type: 'image',
+        current: 2,
+        total: 2,
+        sourcePath: sourcePaths[1],
+        action: 'cache-hit',
+      });
+      expect(progressEvents[4]).toMatchObject({
+        type: 'summary',
+        enabled: true,
+        available: false,
+        uniqueCount: 2,
+        sourceCount: 2,
+        cacheHitCount: 2,
+        builtCount: 0,
+        rebuiltCount: 0,
+        duplicateCount: 0,
+        skippedCount: 0,
+      });
+      expect(progressEvents[4].elapsedMs).toBeNumber();
+      expect(progressEvents[4].elapsedMs).toBeGreaterThanOrEqual(0);
+    } finally {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+      fs.rmSync(tmpCacheDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should reset the shared startup warmup promise after a failure so later calls can retry', async () => {
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'secretcodes-pictures-'));
+    const tmpCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'secretcodes-cache-'));
+    const previousRoot = process.env.CODENAMES_PICTURES_DIR;
+    const previousCache = process.env.FBG_IMAGES_CACHE_DIR;
+    await makeImages(tmpRoot, 1);
+
+    process.env.CODENAMES_PICTURES_DIR = tmpRoot;
+    process.env.FBG_IMAGES_CACHE_DIR = tmpCacheDir;
+
+    const originalExistsSync = fs.existsSync.bind(fs);
+    const existsSyncSpy = jest.spyOn(fs, 'existsSync').mockImplementation((targetPath: fs.PathLike) => {
+      if (typeof targetPath === 'string' && CARD_HELPER_CANDIDATES.includes(path.resolve(targetPath))) {
+        return false;
+      }
+      return originalExistsSync(targetPath);
+    });
+
+    try {
+      await expect(warmSecretcodesPicturesCatalog()).rejects.toThrow('Secret Codes picture helper script is missing.');
+
+      existsSyncSpy.mockRestore();
+
+      const catalog = await warmSecretcodesPicturesCatalog();
+      expect(catalog.enabled).toEqual(true);
+      expect(catalog.count).toEqual(1);
+      expect(catalog.imageIds).toHaveLength(1);
+    } finally {
+      if (existsSyncSpy.mockRestore) {
+        existsSyncSpy.mockRestore();
+      }
+      resetSecretcodesPicturesCatalogCache();
+      if (previousRoot === undefined) {
+        delete process.env.CODENAMES_PICTURES_DIR;
+      } else {
+        process.env.CODENAMES_PICTURES_DIR = previousRoot;
+      }
+      if (previousCache === undefined) {
+        delete process.env.FBG_IMAGES_CACHE_DIR;
+      } else {
+        process.env.FBG_IMAGES_CACHE_DIR = previousCache;
+      }
       fs.rmSync(tmpRoot, { recursive: true, force: true });
       fs.rmSync(tmpCacheDir, { recursive: true, force: true });
     }

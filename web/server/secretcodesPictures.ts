@@ -47,17 +47,48 @@ export interface ISecretcodesPicturesCatalog {
   entriesById: Map<string, ISecretcodesPictureCatalogEntry>;
 }
 
+export type SecretcodesPicturesProgressAction = 'cache-hit' | 'built' | 'rebuilt' | 'duplicate' | 'skipped';
+
+export interface ISecretcodesPicturesProgressEvent {
+  type: 'start' | 'discovered' | 'image' | 'summary';
+  rootDir?: string;
+  cacheDir?: string;
+  sourceCount?: number;
+  current?: number;
+  total?: number;
+  sourcePath?: string;
+  action?: SecretcodesPicturesProgressAction;
+  error?: string;
+  enabled?: boolean;
+  available?: boolean;
+  uniqueCount?: number;
+  elapsedMs?: number;
+  cacheHitCount?: number;
+  builtCount?: number;
+  rebuiltCount?: number;
+  duplicateCount?: number;
+  skippedCount?: number;
+}
+
+interface ISecretcodesPicturesBuildOptions {
+  onProgress?: (event: ISecretcodesPicturesProgressEvent) => void;
+}
+
+interface INormalizedSecretcodesPictureResult {
+  entry: ISecretcodesPictureCatalogEntry;
+  action: Extract<SecretcodesPicturesProgressAction, 'cache-hit' | 'built' | 'rebuilt'>;
+}
+
 let catalogPromise: Promise<ISecretcodesPicturesCatalog> | null = null;
 
 export function getSecretcodesPicturesCatalog(): Promise<ISecretcodesPicturesCatalog> {
-  if (!catalogPromise) {
-    catalogPromise = buildSecretcodesPicturesCatalog(
-      process.env.CODENAMES_PICTURES_DIR || DEFAULT_CODENAMES_PICTURES_DIR,
-      process.env.FBG_IMAGES_CACHE_DIR || DEFAULT_FBG_IMAGES_CACHE_DIR,
-    );
-  }
+  return ensureSecretcodesPicturesCatalogPromise();
+}
 
-  return catalogPromise;
+export function warmSecretcodesPicturesCatalog(
+  onProgress?: (event: ISecretcodesPicturesProgressEvent) => void,
+): Promise<ISecretcodesPicturesCatalog> {
+  return ensureSecretcodesPicturesCatalogPromise({ onProgress });
 }
 
 export function resetSecretcodesPicturesCatalogCache() {
@@ -92,53 +123,110 @@ export function resolveSecretcodesPicturesCacheDir(rawCacheDir?: string): string
 export async function buildSecretcodesPicturesCatalog(
   rawRootDir?: string,
   rawCacheDir?: string,
+  options: ISecretcodesPicturesBuildOptions = {},
 ): Promise<ISecretcodesPicturesCatalog> {
+  const buildStartedAt = Date.now();
   const rootDir = expandHomeDir(rawRootDir);
+  const cacheDir = resolveSecretcodesPicturesCacheDir(rawCacheDir || DEFAULT_FBG_IMAGES_CACHE_DIR);
+  emitSecretcodesPicturesProgress(options.onProgress, {
+    type: 'start',
+    rootDir,
+    cacheDir,
+  });
   if (!rootDir) {
-    return emptyCatalog(false);
+    return emitCatalogSummary(emptyCatalog(false), buildStartedAt, 0, options.onProgress);
   }
 
   const resolvedRoot = await safeRealpath(rootDir);
   if (!resolvedRoot) {
-    return emptyCatalog(true);
+    return emitCatalogSummary(emptyCatalog(true), buildStartedAt, 0, options.onProgress);
   }
 
-  const cacheDir = resolveSecretcodesPicturesCacheDir(rawCacheDir || DEFAULT_FBG_IMAGES_CACHE_DIR);
   if (!cacheDir) {
-    return emptyCatalog(true);
+    return emitCatalogSummary(emptyCatalog(true), buildStartedAt, 0, options.onProgress);
   }
   await fs.promises.mkdir(cacheDir, { recursive: true });
 
   const sourcePaths = new Set<string>();
   const visitedDirectories = new Set<string>();
   await walkPath(resolvedRoot, visitedDirectories, sourcePaths);
+  emitSecretcodesPicturesProgress(options.onProgress, {
+    type: 'discovered',
+    rootDir: resolvedRoot,
+    cacheDir,
+    sourceCount: sourcePaths.size,
+  });
   if (sourcePaths.size > 0) {
     await ensureNativePictureToolchain();
   }
 
   const entriesById = new Map<string, ISecretcodesPictureCatalogEntry>();
   const sortedSourcePaths = Array.from(sourcePaths).sort((a, b) => a.localeCompare(b));
+  let cacheHitCount = 0;
+  let builtCount = 0;
+  let rebuiltCount = 0;
+  let duplicateCount = 0;
+  let skippedCount = 0;
 
-  for (const sourcePath of sortedSourcePaths) {
+  for (const [index, sourcePath] of sortedSourcePaths.entries()) {
     try {
-      const entry = await normalizeSourceToCache(sourcePath, cacheDir);
-      if (!entriesById.has(entry.id)) {
-        entriesById.set(entry.id, entry);
+      const result = await normalizeSourceToCache(sourcePath, cacheDir);
+      if (result.action === 'cache-hit') {
+        cacheHitCount += 1;
+      } else if (result.action === 'built') {
+        builtCount += 1;
+      } else if (result.action === 'rebuilt') {
+        rebuiltCount += 1;
       }
+
+      let action: SecretcodesPicturesProgressAction = result.action;
+      if (!entriesById.has(result.entry.id)) {
+        entriesById.set(result.entry.id, result.entry);
+      } else {
+        duplicateCount += 1;
+        action = 'duplicate';
+      }
+
+      emitSecretcodesPicturesProgress(options.onProgress, {
+        type: 'image',
+        current: index + 1,
+        total: sortedSourcePaths.length,
+        sourcePath,
+        action,
+      });
     } catch (error) {
-      process.stderr.write(`Skipping Secret Codes picture ${sourcePath}: ${formatError(error)}\n`);
+      skippedCount += 1;
+      const errorMessage = formatError(error);
+      emitSecretcodesPicturesProgress(options.onProgress, {
+        type: 'image',
+        current: index + 1,
+        total: sortedSourcePaths.length,
+        sourcePath,
+        action: 'skipped',
+        error: errorMessage,
+      });
+      if (!options.onProgress) {
+        process.stderr.write(`Skipping Secret Codes picture ${sourcePath}: ${errorMessage}\n`);
+      }
       continue;
     }
   }
 
   const imageIds = Array.from(entriesById.keys()).sort((a, b) => a.localeCompare(b));
-  return {
+  const catalog = {
     enabled: true,
     available: imageIds.length >= MIN_PICTURES,
     count: imageIds.length,
     imageIds,
     entriesById,
   };
+  return emitCatalogSummary(catalog, buildStartedAt, sortedSourcePaths.length, options.onProgress, {
+    cacheHitCount,
+    builtCount,
+    rebuiltCount,
+    duplicateCount,
+    skippedCount,
+  });
 }
 
 async function walkPath(rawEntryPath: string, visitedDirectories: Set<string>, sourcePaths: Set<string>) {
@@ -288,19 +376,27 @@ function getTransformDescriptor(sourceHash: string): string {
   ].join('|');
 }
 
-async function normalizeSourceToCache(sourcePath: string, cacheDir: string): Promise<ISecretcodesPictureCatalogEntry> {
+async function normalizeSourceToCache(
+  sourcePath: string,
+  cacheDir: string,
+): Promise<INormalizedSecretcodesPictureResult> {
   const sourceBytes = await fs.promises.readFile(sourcePath);
   const sourceHash = hashHex(sourceBytes);
   const imageId = hashHex(getTransformDescriptor(sourceHash));
   const cachePath = path.join(cacheDir, `${imageId}.${CACHE_IMAGE_EXTENSION}`);
 
+  let action: Extract<SecretcodesPicturesProgressAction, 'cache-hit' | 'built' | 'rebuilt'> = 'cache-hit';
   let shouldRebuildCache = !(await fileExists(cachePath));
+  if (shouldRebuildCache) {
+    action = 'built';
+  }
   if (!shouldRebuildCache && shouldValidateCacheHits()) {
     try {
       await validateCachedImage(cachePath);
     } catch (_error) {
       await fs.promises.rm(cachePath, { force: true });
       shouldRebuildCache = true;
+      action = 'rebuilt';
     }
   }
 
@@ -309,9 +405,12 @@ async function normalizeSourceToCache(sourcePath: string, cacheDir: string): Pro
   }
 
   return {
-    id: imageId,
-    cachePath,
-    contentType: CACHE_IMAGE_CONTENT_TYPE,
+    entry: {
+      id: imageId,
+      cachePath,
+      contentType: CACHE_IMAGE_CONTENT_TYPE,
+    },
+    action,
   };
 }
 
@@ -368,4 +467,60 @@ function emptyCatalog(enabled: boolean): ISecretcodesPicturesCatalog {
     imageIds: [],
     entriesById: new Map(),
   };
+}
+
+function ensureSecretcodesPicturesCatalogPromise(
+  options: ISecretcodesPicturesBuildOptions = {},
+): Promise<ISecretcodesPicturesCatalog> {
+  if (catalogPromise) {
+    return catalogPromise;
+  }
+
+  const nextCatalogPromise = buildSecretcodesPicturesCatalog(
+    process.env.CODENAMES_PICTURES_DIR || DEFAULT_CODENAMES_PICTURES_DIR,
+    process.env.FBG_IMAGES_CACHE_DIR || DEFAULT_FBG_IMAGES_CACHE_DIR,
+    options,
+  ).catch((error) => {
+    if (catalogPromise === nextCatalogPromise) {
+      catalogPromise = null;
+    }
+    throw error;
+  });
+  catalogPromise = nextCatalogPromise;
+  return nextCatalogPromise;
+}
+
+function emitSecretcodesPicturesProgress(
+  onProgress: ISecretcodesPicturesBuildOptions['onProgress'],
+  event: ISecretcodesPicturesProgressEvent,
+) {
+  if (onProgress) {
+    onProgress(event);
+  }
+}
+
+function emitCatalogSummary(
+  catalog: ISecretcodesPicturesCatalog,
+  buildStartedAt: number,
+  sourceCount: number,
+  onProgress: ISecretcodesPicturesBuildOptions['onProgress'],
+  counts: Pick<
+    ISecretcodesPicturesProgressEvent,
+    'cacheHitCount' | 'builtCount' | 'rebuiltCount' | 'duplicateCount' | 'skippedCount'
+  > = {},
+) {
+  emitSecretcodesPicturesProgress(onProgress, {
+    type: 'summary',
+    enabled: catalog.enabled,
+    available: catalog.available,
+    uniqueCount: catalog.count,
+    sourceCount,
+    elapsedMs: Date.now() - buildStartedAt,
+    cacheHitCount: counts.cacheHitCount ?? 0,
+    builtCount: counts.builtCount ?? 0,
+    rebuiltCount: counts.rebuiltCount ?? 0,
+    duplicateCount: counts.duplicateCount ?? 0,
+    skippedCount: counts.skippedCount ?? 0,
+  });
+  return catalog;
 }
