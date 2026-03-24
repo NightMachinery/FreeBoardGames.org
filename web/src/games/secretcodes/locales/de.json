@@ -29,6 +29,8 @@
   "remove_spymaster": "Entferne Spymaster",
   "make_representative": "Mache zum Vertreter",
   "remove_representative": "Entferne Vertreter",
+  "assign_blue_team": "Zu Blau",
+  "assign_red_team": "Zu Rot",
   "select": "Auswählen",
   "toggle_view_spymaster": "Sicht ändern: Spymaster",
   "toggle_view_normal": "Sicht ändern: Normal",

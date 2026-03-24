@@ -4,18 +4,16 @@ import { Ctx } from 'boardgame.io';
 
 export function switchTeam(G: IG, ctx: Ctx, teamColor: TeamColor) {
   const actingPlayerID = getActingPlayerID(ctx);
-  const oldTeam = getPlayerTeam(G, actingPlayerID);
-  const newTeam = getTeamByColor(G, teamColor);
+  return movePlayerToTeam(G, actingPlayerID, teamColor);
+}
 
-  if (typeof oldTeam !== 'undefined') {
-    if (oldTeam.color === teamColor) return;
-
-    oldTeam.spymasterIDs = oldTeam.spymasterIDs.filter((id) => id !== actingPlayerID);
-    oldTeam.representativeIDs = oldTeam.representativeIDs.filter((id) => id !== actingPlayerID);
-    oldTeam.playersID = oldTeam.playersID.filter((id) => id !== actingPlayerID);
+export function assignPlayerTeam(G: IG, ctx: Ctx, playerID: string, teamColor: TeamColor) {
+  const pID = Number(playerID);
+  if (!isHostPlayer(G, ctx) || !Number.isInteger(pID) || pID < 0 || pID >= ctx.numPlayers) {
+    return INVALID_MOVE;
   }
 
-  newTeam.playersID.push(actingPlayerID);
+  return movePlayerToTeam(G, playerID, teamColor);
 }
 
 export function toggleSpymaster(G: IG, ctx: Ctx, playerID: string) {
@@ -216,4 +214,27 @@ export function getActingPlayerID(ctx: Ctx): string {
 
 function isHostPlayer(G: IG, ctx: Ctx): boolean {
   return getActingPlayerID(ctx) === G.hostPlayerID;
+}
+
+function movePlayerToTeam(G: IG, playerID: string, teamColor: TeamColor) {
+  const oldTeam = getPlayerTeam(G, playerID);
+  const newTeam = getTeamByColor(G, teamColor);
+
+  if (!newTeam) {
+    return INVALID_MOVE;
+  }
+
+  if (oldTeam?.color === teamColor) {
+    return;
+  }
+
+  if (typeof oldTeam !== 'undefined') {
+    oldTeam.spymasterIDs = oldTeam.spymasterIDs.filter((id) => id !== playerID);
+    oldTeam.representativeIDs = oldTeam.representativeIDs.filter((id) => id !== playerID);
+    oldTeam.playersID = oldTeam.playersID.filter((id) => id !== playerID);
+  }
+
+  if (!newTeam.playersID.includes(playerID)) {
+    newTeam.playersID.push(playerID);
+  }
 }

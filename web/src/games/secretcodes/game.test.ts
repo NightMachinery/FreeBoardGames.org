@@ -4,7 +4,7 @@ import { SecretcodesGame } from './game';
 import { Ctx } from 'boardgame.io';
 import { CardColor, Phases, TeamColor } from './definitions';
 import { DEFAULT_FULL_CUSTOMIZATION } from './customization';
-import { chooseCard, pass, switchTeam, toggleRepresentative, toggleSpymaster } from './util';
+import { assignPlayerTeam, chooseCard, pass, switchTeam, toggleRepresentative, toggleSpymaster } from './util';
 
 describe('secret codes rules', () => {
   it('should work for a simple game', () => {
@@ -191,6 +191,116 @@ describe('secret codes rules', () => {
     expect(state.G.teams[0].playersID).toEqual(['0']);
     expect(state.G.teams[0].representativeIDs).toEqual([]);
     expect(state.G.teams[1].playersID).toEqual(['2', '3', '1']);
+  });
+
+  it('should allow the host to assign an unassigned player to a team', () => {
+    const client = Client({
+      game: SecretcodesGame,
+      numPlayers: 4,
+    }) as any;
+    const state = client.store.getState();
+    const ctx = { ...state.ctx, playerID: '0' } as Ctx;
+    state.G = {
+      ...state.G,
+      hostPlayerID: '0',
+      teams: [
+        { color: TeamColor.Red, playersID: ['0'], spymasterIDs: ['0'], representativeIDs: [] },
+        { color: TeamColor.Blue, playersID: ['2'], spymasterIDs: ['2'], representativeIDs: [] },
+      ],
+    };
+
+    assignPlayerTeam(state.G, ctx, '1', TeamColor.Blue);
+
+    expect(state.G.teams[1].playersID).toEqual(['2', '1']);
+  });
+
+  it('should remove roles when the host assigns a player to a different team', () => {
+    const client = Client({
+      game: SecretcodesGame,
+      numPlayers: 4,
+    }) as any;
+    const state = client.store.getState();
+    const ctx = { ...state.ctx, playerID: '0' } as Ctx;
+    state.G = {
+      ...state.G,
+      hostPlayerID: '0',
+      teams: [
+        { color: TeamColor.Red, playersID: ['0', '1'], spymasterIDs: ['0'], representativeIDs: ['1'] },
+        { color: TeamColor.Blue, playersID: ['2', '3'], spymasterIDs: ['2'], representativeIDs: [] },
+      ],
+    };
+
+    assignPlayerTeam(state.G, ctx, '1', TeamColor.Blue);
+
+    expect(state.G.teams[0].playersID).toEqual(['0']);
+    expect(state.G.teams[0].representativeIDs).toEqual([]);
+    expect(state.G.teams[1].playersID).toEqual(['2', '3', '1']);
+  });
+
+  it('should reject team assignment from non-host players', () => {
+    const client = Client({
+      game: SecretcodesGame,
+      numPlayers: 4,
+    }) as any;
+    const state = client.store.getState();
+    state.G = {
+      ...state.G,
+      hostPlayerID: '0',
+      teams: [
+        { color: TeamColor.Red, playersID: ['0'], spymasterIDs: ['0'], representativeIDs: [] },
+        { color: TeamColor.Blue, playersID: ['2'], spymasterIDs: ['2'], representativeIDs: [] },
+      ],
+    };
+
+    const result = assignPlayerTeam(state.G, { ...state.ctx, playerID: '1' } as Ctx, '2', TeamColor.Red);
+
+    expect(result).toEqual(INVALID_MOVE);
+    expect(state.G.teams[0].playersID).toEqual(['0']);
+    expect(state.G.teams[1].playersID).toEqual(['2']);
+  });
+
+  it('should reject team assignment for invalid player IDs', () => {
+    const client = Client({
+      game: SecretcodesGame,
+      numPlayers: 4,
+    }) as any;
+    const state = client.store.getState();
+    const ctx = { ...state.ctx, playerID: '0' } as Ctx;
+    state.G = {
+      ...state.G,
+      hostPlayerID: '0',
+      teams: [
+        { color: TeamColor.Red, playersID: ['0'], spymasterIDs: ['0'], representativeIDs: [] },
+        { color: TeamColor.Blue, playersID: ['2'], spymasterIDs: ['2'], representativeIDs: [] },
+      ],
+    };
+
+    const result = assignPlayerTeam(state.G, ctx, 'not-a-player', TeamColor.Red);
+
+    expect(result).toEqual(INVALID_MOVE);
+  });
+
+  it('should no-op when the host assigns a player to their current team', () => {
+    const client = Client({
+      game: SecretcodesGame,
+      numPlayers: 4,
+    }) as any;
+    const state = client.store.getState();
+    const ctx = { ...state.ctx, playerID: '0' } as Ctx;
+    state.G = {
+      ...state.G,
+      hostPlayerID: '0',
+      teams: [
+        { color: TeamColor.Red, playersID: ['0', '1'], spymasterIDs: ['0'], representativeIDs: ['1'] },
+        { color: TeamColor.Blue, playersID: ['2', '3'], spymasterIDs: ['2'], representativeIDs: [] },
+      ],
+    };
+
+    assignPlayerTeam(state.G, ctx, '1', TeamColor.Red);
+
+    expect(state.G.teams[0].playersID).toEqual(['0', '1']);
+    expect(state.G.teams[0].representativeIDs).toEqual(['1']);
+    expect(state.G.teams[1].playersID).toEqual(['2', '3']);
   });
 
   it('should only allow representatives to choose cards and pass when present', () => {

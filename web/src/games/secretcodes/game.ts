@@ -12,6 +12,7 @@ import {
   pass,
   startGame,
   switchTeam,
+  assignPlayerTeam,
   toggleRepresentative,
   toggleSpymaster,
   isPlayerSpymaster,
@@ -75,6 +76,7 @@ const GameConfig: Game<IG> = {
       start: true,
       moves: {
         switchTeam,
+        assignPlayerTeam,
         toggleSpymaster,
         toggleRepresentative,
         startGame,
