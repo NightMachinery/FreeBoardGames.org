@@ -10,6 +10,7 @@ import { makeMount } from 'test/utils/enzymeUtil';
 
 const originalFetch = (global as any).fetch;
 const PICTURE_CARDS_PER_ROW_STORAGE_KEY = 'secretcodesPicturesCardsPerRow';
+const SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY = 'secretcodesSpymasterPictureHighlights';
 const mount = makeMount({ gameCode: 'secretcodes' });
 
 function render(
@@ -291,6 +292,77 @@ describe('Secretcodes UI', () => {
     expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 7 });
   });
 
+  it('should show the picture highlight toggle only to spymasters during live pictures mode', async () => {
+    mockAvailablePicturesManifest();
+
+    state.ctx = { ...state.ctx, currentPlayer: '0' };
+    state.G = { ...state.G, picturesMode: true, picturesSeed: 'seed' };
+
+    let wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    expect(
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-spymaster-highlights-toggle').exists(),
+    ).toEqual(true);
+
+    wrapper = render(client, { ...state, ctx: { ...state.ctx, currentPlayer: '1' } });
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    expect(
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-spymaster-highlights-toggle').exists(),
+    ).toEqual(false);
+
+    wrapper = render(client, state, false, client.moves, null, GameMode.OnlineFriend);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    expect(
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-spymaster-highlights-toggle').exists(),
+    ).toEqual(false);
+  });
+
+  it('should persist the spymaster picture highlight preference and apply it in spymaster view only', async () => {
+    mockAvailablePicturesManifest();
+
+    state.ctx = { ...state.ctx, currentPlayer: '0' };
+    const newCards = [...state.G.cards];
+    newCards[0] = { ...newCards[0], color: CardColor.blue };
+    state.G = { ...state.G, cards: newCards, picturesMode: true, picturesSeed: 'seed' };
+
+    let wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    const getToggle = () =>
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-spymaster-highlights-toggle').first();
+    const toggleOnChange = () => (getToggle().prop('control') as any).props.onChange as Function;
+    const toggleChecked = () => (getToggle().prop('control') as any).props.checked as boolean;
+
+    expect(wrapper.find('.card').at(0).hasClass('cardPictureHighlight')).toEqual(false);
+
+    toggleOnChange()?.({} as any, true);
+    wrapper.update();
+
+    expect(JSON.parse(localStorage.getItem(SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY)!)).toEqual(true);
+    expect(wrapper.find('.card').at(0).hasClass('cardPictureHighlight')).toEqual(false);
+
+    wrapper.find('.selectTeamBtn').simulate('click');
+    wrapper.update();
+
+    expect(wrapper.find('.card').at(0).hasClass('cardPictureHighlight')).toEqual(true);
+
+    wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    expect(toggleChecked()).toEqual(true);
+    wrapper.find('.selectTeamBtn').simulate('click');
+    wrapper.update();
+    expect(wrapper.find('.card').at(0).hasClass('cardPictureHighlight')).toEqual(true);
+  });
+
   it('should keep picture controls visible on the game over board', async () => {
     mockAvailablePicturesManifest();
 
@@ -304,6 +376,9 @@ describe('Secretcodes UI', () => {
     expect(wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-slider').exists()).toEqual(
       true,
     );
+    expect(
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-spymaster-highlights-toggle').exists(),
+    ).toEqual(false);
     expect(wrapper.find('.cardIndexBadge')).toHaveLength(25);
   });
 

@@ -15,6 +15,7 @@
   "black_cards": "Black cards",
   "pictures_mode": "Pictures mode",
   "pictures_mode_images_per_row": "Images per row",
+  "pictures_mode_color_highlights": "Color highlights",
   "pictures_mode_loading": "Loading pictures mode assets...",
   "pictures_mode_requires_images": "Pictures mode requires at least 25 images in CODENAMES_PICTURES_DIR (found {{ count }}).",
   "pictures_mode_unavailable": "Pictures mode assets are unavailable.",

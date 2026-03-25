@@ -5,7 +5,9 @@ import * as React from 'react';
 import css from './board.module.css';
 import { isLocalGame } from 'gamesShared/helpers/gameMode';
 import Button from '@material-ui/core/Button';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Slider from '@material-ui/core/Slider';
+import Switch from '@material-ui/core/Switch';
 import {
   canPlayerGuessCurrentTeam,
   getCurrentTeam,
@@ -38,6 +40,7 @@ interface IPlayBoardOutterProps {
 
 interface IPlayBoardState {
   spymasterView: boolean;
+  spymasterPictureHighlights: boolean;
   picturesLoaded: boolean;
   picturesAvailable: boolean;
   pictureImageIds: string[];
@@ -48,6 +51,7 @@ const DEFAULT_PICTURE_CARDS_PER_ROW = 5;
 const MIN_PICTURE_CARDS_PER_ROW = 3;
 const MAX_PICTURE_CARDS_PER_ROW = 10;
 const PICTURE_CARDS_PER_ROW_STORAGE_KEY = 'secretcodesPicturesCardsPerRow';
+const SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY = 'secretcodesSpymasterPictureHighlights';
 
 function clampPictureCardsPerRow(value: unknown): number {
   const parsedValue = Number(value);
@@ -85,9 +89,37 @@ function persistPictureCardsPerRowPreference(value: number) {
   } catch {}
 }
 
+function loadSpymasterPictureHighlightsPreference(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const storedValue = localStorage.getItem(SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY);
+    if (storedValue === null) {
+      return false;
+    }
+
+    return JSON.parse(storedValue) === true;
+  } catch {
+    return false;
+  }
+}
+
+function persistSpymasterPictureHighlightsPreference(value: boolean) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    localStorage.setItem(SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY, JSON.stringify(value));
+  } catch {}
+}
+
 export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IPlayBoardOutterProps, IPlayBoardState> {
   state = {
     spymasterView: false,
+    spymasterPictureHighlights: false,
     picturesLoaded: !this.props.G.picturesMode,
     picturesAvailable: !this.props.G.picturesMode,
     pictureImageIds: [],
@@ -96,8 +128,12 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
   componentDidMount() {
     const pictureCardsPerRow = loadPictureCardsPerRowPreference();
-    if (pictureCardsPerRow !== this.state.pictureCardsPerRow) {
-      this.setState({ pictureCardsPerRow });
+    const spymasterPictureHighlights = loadSpymasterPictureHighlightsPreference();
+    if (
+      pictureCardsPerRow !== this.state.pictureCardsPerRow ||
+      spymasterPictureHighlights !== this.state.spymasterPictureHighlights
+    ) {
+      this.setState({ pictureCardsPerRow, spymasterPictureHighlights });
     }
     this._loadPicturesIfNeeded();
   }
@@ -138,6 +174,11 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     const pictureCardsPerRow = clampPictureCardsPerRow(Array.isArray(newValue) ? newValue[0] : newValue);
     persistPictureCardsPerRowPreference(pictureCardsPerRow);
     this.setState({ pictureCardsPerRow });
+  };
+
+  _setSpymasterPictureHighlights = (_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+    persistSpymasterPictureHighlightsPreference(checked);
+    this.setState({ spymasterPictureHighlights: checked });
   };
 
   _chooseCard = (cardIndex: number) => {
@@ -284,6 +325,21 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
           onChange={this._setPictureCardsPerRow}
           aria-label={this.props.translate('pictures_mode_images_per_row')}
         />
+        {isPlayerSpymaster(this.props.G, this._playerID()) && !this.props.isGameOver ? (
+          <FormControlLabel
+            className={css.pictureHighlightsToggle}
+            data-testid="pictures-spymaster-highlights-toggle"
+            control={
+              <Switch
+                checked={this.state.spymasterPictureHighlights}
+                onChange={this._setSpymasterPictureHighlights}
+                color="primary"
+                data-testid="pictures-spymaster-highlights-toggle"
+              />
+            }
+            label={this.props.translate('pictures_mode_color_highlights')}
+          />
+        ) : null}
       </div>
     );
   };
@@ -300,6 +356,12 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
     for (let i = 0; i < this.props.G.cards.length; i += 1) {
       const card = this.props.G.cards[i];
+      const showCardColors = card.revealed || this._showSpymasterView();
+      const showSpymasterPictureHighlights =
+        this.props.G.picturesMode &&
+        !this.props.isGameOver &&
+        this.state.spymasterPictureHighlights &&
+        this._showSpymasterView();
 
       const classes = [css.card];
       if (this.props.G.picturesMode) {
@@ -309,11 +371,13 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
         classes.push(css.cardRevealedSpymasterView);
       }
 
-      if (card.revealed || this._showSpymasterView()) {
+      if (showCardColors) {
         if (card.color === CardColor.blue) classes.push(css.cardBlue);
         else if (card.color === CardColor.red) classes.push(css.cardRed);
         else if (card.color === CardColor.civilian) classes.push(css.cardCivilian);
         else if (card.color === CardColor.assassin) classes.push(css.cardAssassin);
+
+        if (showSpymasterPictureHighlights) classes.push(css.cardPictureHighlight);
 
         if (i === this.props.G.lastSelectedCardIndex) classes.push(css.cardLastSelected);
 

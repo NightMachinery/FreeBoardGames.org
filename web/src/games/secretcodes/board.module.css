@@ -63,8 +63,9 @@ button.playActionBtn {
 }
 
 .cardPictures {
+  isolation: isolate;
   padding: 0;
-  border: solid 4px #d6d6d6;
+  border: solid 6px #d6d6d6;
   background-color: #fff;
   color: transparent;
   fill: transparent;
@@ -147,6 +148,8 @@ button.playActionBtn {
 }
 
 .cardImage {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -154,16 +157,42 @@ button.playActionBtn {
 }
 
 .cardFallbackWord {
+  position: relative;
+  z-index: 1;
   padding: 0.5rem;
   color: #111;
   word-break: break-word;
+}
+
+.cardPictureHighlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.cardPictures.cardPictureHighlight.cardBlue::after {
+  background-color: rgba(36, 123, 160, 0.24);
+}
+
+.cardPictures.cardPictureHighlight.cardRed::after {
+  background-color: rgba(242, 95, 92, 0.24);
+}
+
+.cardPictures.cardPictureHighlight.cardCivilian::after {
+  background-color: rgba(212, 179, 127, 0.24);
+}
+
+.cardPictures.cardPictureHighlight.cardAssassin::after {
+  background-color: rgba(80, 81, 79, 0.24);
 }
 
 .cardIndexBadge {
   position: absolute;
   top: 0.35rem;
   right: 0.35rem;
-  z-index: 1;
+  z-index: 2;
   min-width: 1.75rem;
   height: 1.75rem;
   padding: 0 0.35rem;
@@ -187,6 +216,10 @@ button.playActionBtn {
 .pictureControlLabel {
   margin: 0 0 0.35rem;
   text-align: center;
+}
+
+.pictureHighlightsToggle {
+  margin-top: 0.35rem;
 }
 
 .pictureStatus {
