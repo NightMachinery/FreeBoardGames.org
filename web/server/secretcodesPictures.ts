@@ -168,7 +168,8 @@ export async function buildSecretcodesPicturesCatalog(
   let duplicateCount = 0;
   let skippedCount = 0;
 
-  for (const [index, sourcePath] of sortedSourcePaths.entries()) {
+  for (let index = 0; index < sortedSourcePaths.length; index += 1) {
+    const sourcePath = sortedSourcePaths[index];
     try {
       const result = await normalizeSourceToCache(sourcePath, cacheDir);
       if (result.action === 'cache-hit') {
