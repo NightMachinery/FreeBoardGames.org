@@ -10,7 +10,7 @@ nvm use 16
 ROOT_DIR=$(cd "$(dirname "$0")" && pwd)
 cd "$ROOT_DIR"
 
-DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/SurrealPictures/chosen_1}"
+DEFAULT_CODENAMES_PICTURES_DIR="${DEFAULT_CODENAMES_PICTURES_DIR:-~/Pictures/SurrealPictures/chosen_2}"
 DEFAULT_FBG_IMAGES_CACHE_DIR="${DEFAULT_FBG_IMAGES_CACHE_DIR:-~/.cache/talespin/cards}"
 
 USE_HTTPS="false"

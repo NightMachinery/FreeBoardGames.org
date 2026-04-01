@@ -10,7 +10,7 @@ const execFileAsync = promisify(execFile);
 const MIN_PICTURES = 25;
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const IMAGE_SNIFF_BYTE_COUNT = 12;
-const DEFAULT_CODENAMES_PICTURES_DIR = '~/Pictures/SurrealPictures/chosen_1';
+const DEFAULT_CODENAMES_PICTURES_DIR = '~/Pictures/SurrealPictures/chosen_2';
 const DEFAULT_FBG_IMAGES_CACHE_DIR = '~/.cache/talespin/cards';
 const VALIDATE_CACHE_HITS_ENV = 'FBG_VALIDATE_CACHE_HITS_P';
 
