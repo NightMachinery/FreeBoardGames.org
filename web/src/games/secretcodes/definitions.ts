@@ -27,6 +27,13 @@ export interface Card {
   revealed: boolean;
 }
 
+export interface RemainingCardCounts {
+  blue: number;
+  red: number;
+  civilian: number;
+  assassin: number;
+}
+
 export interface IG {
   teams: Team[];
   cards: Card[];
@@ -41,6 +48,7 @@ export interface IG {
    */
   lastSelectedCardIndex: null | number;
   lastSelectedCardTeamColor: null | TeamColor;
+  remainingCardCounts?: RemainingCardCounts;
 }
 
 export enum Phases {

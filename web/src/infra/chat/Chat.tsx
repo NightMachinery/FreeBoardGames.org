@@ -18,6 +18,7 @@ import CloseIcon from '@material-ui/icons/Close';
 import Badge from '@material-ui/core/Badge';
 import { withTranslation, WithTranslation } from 'infra/i18n';
 import { compose } from 'recompose';
+import { playChatMessageSound, shouldPlayIncomingChatSound } from './sound';
 
 interface ChatInnerProps extends WithTranslation {}
 
@@ -26,6 +27,8 @@ export interface ChatOutterProps {
   channelId: string;
   dispatch: Dispatch;
   canSend?: boolean;
+  chatSoundEnabled?: boolean;
+  currentUserNickname?: string;
 }
 
 export interface ChatState {
@@ -75,12 +78,21 @@ class ChatInternal extends React.Component<ChatInnerProps & ChatOutterProps, Cha
           let messageHistory = this.state.messageHistory;
           const lastMessage = messageHistory.slice(-1)[0];
           if (newMessage && !this.isSameMessage(newMessage, lastMessage)) {
+            const shouldPlaySound = shouldPlayIncomingChatSound({
+              chatSoundEnabled: this.props.chatSoundEnabled,
+              currentUserNickname: this.props.currentUserNickname,
+              lastMessage,
+              newMessage,
+            });
             messageHistory = [...messageHistory, newMessage];
             let unseenMessages = 0;
             if (!this.state.isOpen) {
               unseenMessages = this.state.unseenMessages + 1;
             }
             this.setState({ messageHistory, unseenMessages });
+            if (shouldPlaySound) {
+              playChatMessageSound();
+            }
           }
           const button = this.renderButton();
           const panel = this.renderPanel(messageHistory);

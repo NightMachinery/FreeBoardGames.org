@@ -15,12 +15,14 @@ import { compose } from 'recompose';
 import { IOptionsItems } from 'gamesShared/definitions/options';
 import { home } from 'infra/navigation';
 import { getGameDefinition } from 'infra/game';
+import { ReduxUserState } from 'infra/common/redux/definitions';
 
 export * from '../../definitions/options';
 
 interface IGameDarkSublayoutInnerProps {
   dispatch: Dispatch;
   router: NextRouter;
+  user: ReduxUserState;
 }
 
 interface IGameDarkSublayoutOutterProps {
@@ -29,6 +31,7 @@ interface IGameDarkSublayoutOutterProps {
   maxWidth?: string;
   gameArgs: IGameArgs;
   avoidOverscrollReload?: boolean;
+  chatSoundEnabled?: boolean;
 }
 
 interface IGameDarkSublayoutProps extends IGameDarkSublayoutInnerProps, IGameDarkSublayoutOutterProps {}
@@ -149,6 +152,8 @@ export class GameDarkSublayoutInternal extends React.Component<IGameDarkSublayou
           channelId={matchId}
           dispatch={this.props.dispatch}
           canSend={Boolean(this.props.gameArgs.credentials)}
+          chatSoundEnabled={this.props.chatSoundEnabled}
+          currentUserNickname={this.props.user?.nickname}
         />
       </div>
     );

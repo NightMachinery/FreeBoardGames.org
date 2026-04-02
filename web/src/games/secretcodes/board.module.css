@@ -173,43 +173,60 @@ button.playActionBtn {
 }
 
 .cardPictures.cardPictureHighlight.cardBlue::after {
-  background-color: rgba(36, 123, 160, 0.24);
+  background-color: rgba(36, 123, 160, 0.16);
 }
 
 .cardPictures.cardPictureHighlight.cardRed::after {
-  background-color: rgba(242, 95, 92, 0.24);
+  background-color: rgba(242, 95, 92, 0.16);
 }
 
 .cardPictures.cardPictureHighlight.cardCivilian::after {
-  background-color: rgba(212, 179, 127, 0.24);
+  background-color: rgba(212, 179, 127, 0.16);
 }
 
 .cardPictures.cardPictureHighlight.cardAssassin::after {
-  background-color: rgba(80, 81, 79, 0.24);
+  background-color: rgba(80, 81, 79, 0.16);
 }
 
 .cardIndexBadge {
   position: absolute;
   top: 0.35rem;
-  right: 0.35rem;
+  left: 0.35rem;
   z-index: 2;
-  min-width: 1.75rem;
-  height: 1.75rem;
-  padding: 0 0.35rem;
-  border-radius: 999px;
+  min-width: 2rem;
+  height: 1.45rem;
+  padding: 0 0.4rem;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.72);
+  background-color: rgba(0, 0, 0, 0.42);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
 }
 
-.pictureControls {
+.boardControls {
   margin: 0 auto 1rem;
+  max-width: 920px;
+}
+
+.controlToggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 1rem;
+  margin: 0.75rem auto 0;
+}
+
+.controlToggle {
+  margin: 0;
+}
+
+.pictureControls {
+  margin: 0 auto;
   max-width: 420px;
 }
 
@@ -224,6 +241,58 @@ button.playActionBtn {
 
 .pictureStatus {
   text-align: center;
+}
+
+.remainingCounts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+}
+
+.remainingCountChip {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.remainingCountBlue {
+  background-color: #247ba0;
+  color: #fff;
+}
+
+.remainingCountRed {
+  background-color: #f25f5c;
+  color: #fff;
+}
+
+.remainingCountCivilian {
+  background-color: beige;
+}
+
+.remainingCountAssassin {
+  background-color: #50514f;
+  color: #fff;
+}
+
+.confirmDialogPicturePreview {
+  width: min(240px, 70vw);
+  aspect-ratio: 2 / 3;
+  margin: 0.5rem auto 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f7f7f7;
+}
+
+.confirmDialogWord {
+  margin: 0.25rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: capitalize;
 }
 
 .winners {

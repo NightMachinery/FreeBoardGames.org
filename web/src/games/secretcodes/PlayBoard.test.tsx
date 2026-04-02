@@ -7,10 +7,17 @@ import { CardColor, TeamColor } from './definitions';
 import { chooseCard } from './util';
 import { resetSecretcodesPicturesManifestCache } from './pictures';
 import { makeMount } from 'test/utils/enzymeUtil';
+import * as device from 'infra/common/device/detectIsMobile';
+import * as secretcodesSound from './sound';
+import {
+  CARD_CHOICE_SOUNDS_STORAGE_KEY,
+  CONFIRM_ACTIONS_STORAGE_KEY,
+  PICTURE_CARD_NUMBERS_VISIBLE_STORAGE_KEY,
+  PICTURE_CARDS_PER_ROW_STORAGE_KEY,
+  SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY,
+} from './preferences';
 
 const originalFetch = (global as any).fetch;
-const PICTURE_CARDS_PER_ROW_STORAGE_KEY = 'secretcodesPicturesCardsPerRow';
-const SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY = 'secretcodesSpymasterPictureHighlights';
 const mount = makeMount({ gameCode: 'secretcodes' });
 
 function render(
@@ -20,6 +27,8 @@ function render(
   moves = client.moves,
   playerID: string | null = '0',
   mode: GameMode = GameMode.LocalFriend,
+  chatSoundEnabled = true,
+  setChatSoundEnabled = jest.fn(),
 ) {
   return Enzyme.shallow(
     <PlayBoard
@@ -41,6 +50,8 @@ function render(
         ],
       }}
       isGameOver={gameOver}
+      chatSoundEnabled={chatSoundEnabled}
+      setChatSoundEnabled={setChatSoundEnabled}
     />,
   ).dive();
 }
@@ -52,6 +63,8 @@ function renderMounted(
   moves = client.moves,
   playerID: string | null = '0',
   mode: GameMode = GameMode.LocalFriend,
+  chatSoundEnabled = true,
+  setChatSoundEnabled = jest.fn(),
 ) {
   return mount(
     <PlayBoard
@@ -73,6 +86,8 @@ function renderMounted(
         ],
       }}
       isGameOver={gameOver}
+      chatSoundEnabled={chatSoundEnabled}
+      setChatSoundEnabled={setChatSoundEnabled}
     />,
   );
 }
@@ -114,6 +129,7 @@ describe('Secretcodes UI', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     resetSecretcodesPicturesManifestCache();
     (global as any).fetch = originalFetch;
     localStorage.clear();
@@ -148,7 +164,7 @@ describe('Secretcodes UI', () => {
     newCards[0] = { ...newCards[0], revealed: true };
     state.G = { ...state.G, cards: newCards };
 
-    const wrapper = render(client, state);
+    const wrapper: any = render(client, state);
     // Normal view
     let cards = wrapper.find('.card');
     expect(cards.at(0).hasClass('cardRevealedSpymasterView')).toBeFalsy();
@@ -266,6 +282,32 @@ describe('Secretcodes UI', () => {
     expect(badges.at(24).text()).toEqual('25');
   });
 
+  it('should hide picture card badges when the toggle is turned off and restore the preference on remount', async () => {
+    mockAvailablePicturesManifest();
+
+    state.ctx = { ...state.ctx, currentPlayer: '0' };
+    state.G = { ...state.G, picturesMode: true, picturesSeed: 'seed' };
+
+    let wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    expect(wrapper.find('.cardIndexBadge')).toHaveLength(25);
+
+    const toggle = wrapper.findWhere((node) => node.prop('data-testid') === 'picture-card-numbers-toggle').first();
+    ((toggle.prop('control') as any).props.onChange as Function)?.({} as any, false);
+    wrapper.update();
+
+    expect(JSON.parse(localStorage.getItem(PICTURE_CARD_NUMBERS_VISIBLE_STORAGE_KEY)!)).toEqual(false);
+    expect(wrapper.find('.cardIndexBadge')).toHaveLength(0);
+
+    wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    expect(wrapper.find('.cardIndexBadge')).toHaveLength(0);
+  });
+
   it('should persist the picture cards per row preference and restore it on remount', async () => {
     mockAvailablePicturesManifest();
 
@@ -290,6 +332,121 @@ describe('Secretcodes UI', () => {
     wrapper.update();
 
     expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 7 });
+  });
+
+  it('should default confirm actions on for mobile and off for desktop when unset', () => {
+    state.ctx = { ...state.ctx, currentPlayer: '1' };
+
+    jest.spyOn(device, 'detectIsMobile').mockReturnValue(true);
+    let wrapper = render(client, state);
+    wrapper.update();
+
+    expect(
+      (
+        wrapper
+          .findWhere((node) => node.prop('data-testid') === 'confirm-actions-toggle')
+          .first()
+          .prop('control') as any
+      ).props.checked as boolean,
+    ).toEqual(true);
+
+    localStorage.clear();
+    jest.spyOn(device, 'detectIsMobile').mockReturnValue(false);
+    wrapper = render(client, state);
+    wrapper.update();
+
+    expect(
+      (
+        wrapper
+          .findWhere((node) => node.prop('data-testid') === 'confirm-actions-toggle')
+          .first()
+          .prop('control') as any
+      ).props.checked as boolean,
+    ).toEqual(false);
+  });
+
+  it('should confirm card guesses and passes before submitting moves when enabled', () => {
+    state.ctx = { ...state.ctx, currentPlayer: '1', phase: 'guess' };
+    const moves = {
+      ...client.moves,
+      chooseCard: jest.fn(),
+      pass: jest.fn(),
+    };
+
+    const wrapper = render(client, state, false, moves);
+    (
+      (
+        wrapper
+          .findWhere((node) => node.prop('data-testid') === 'confirm-actions-toggle')
+          .first()
+          .prop('control') as any
+      ).props.onChange as Function
+    )?.({} as any, true);
+    wrapper.update();
+
+    wrapper.find('.card').at(0).simulate('click');
+    expect(moves.chooseCard).not.toHaveBeenCalled();
+    expect(wrapper.state('pendingAction')).toEqual({ type: 'guess', cardIndex: 0 });
+
+    (wrapper.instance() as any)._confirmPendingAction();
+    expect(moves.chooseCard).toHaveBeenCalledWith(0);
+
+    wrapper.find('.playActionBtn').simulate('click');
+    expect(moves.pass).not.toHaveBeenCalled();
+    expect(wrapper.state('pendingAction')).toEqual({ type: 'pass' });
+
+    (wrapper.instance() as any)._confirmPendingAction();
+    expect(moves.pass).toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem(CONFIRM_ACTIONS_STORAGE_KEY)!)).toEqual(true);
+  });
+
+  it('should render remaining unrevealed counts to players', () => {
+    state.ctx = { ...state.ctx, currentPlayer: '1' };
+    state.G = {
+      ...state.G,
+      remainingCardCounts: {
+        blue: 3,
+        red: 4,
+        civilian: 5,
+        assassin: 1,
+      },
+    };
+
+    const wrapper = render(client, state);
+    const remainingCounts = wrapper.findWhere((node) => node.prop('data-testid') === 'remaining-card-counts').text();
+
+    expect(remainingCounts).toContain('remaining_blue: 3');
+    expect(remainingCounts).toContain('remaining_red: 4');
+    expect(remainingCounts).toContain('remaining_civilian: 5');
+    expect(remainingCounts).toContain('remaining_assassin: 1');
+  });
+
+  it('should trigger the card choice sound only while the preference is enabled', () => {
+    const soundSpy = jest.spyOn(secretcodesSound, 'playSecretcodesCardChoiceSound').mockImplementation(() => undefined);
+    state.ctx = { ...state.ctx, currentPlayer: '1' };
+
+    const wrapper = render(client, state);
+
+    wrapper.setProps({
+      G: { ...state.G, lastSelectedCardIndex: 4 },
+    });
+    expect(soundSpy).toHaveBeenCalledTimes(1);
+
+    (
+      (
+        wrapper
+          .findWhere((node) => node.prop('data-testid') === 'card-choice-sounds-toggle')
+          .first()
+          .prop('control') as any
+      ).props.onChange as Function
+    )?.({} as any, false);
+    wrapper.update();
+
+    wrapper.setProps({
+      G: { ...state.G, lastSelectedCardIndex: 7 },
+    });
+    expect(soundSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem(CARD_CHOICE_SOUNDS_STORAGE_KEY)!)).toEqual(false);
   });
 
   it('should show the picture highlight toggle only to spymasters during live pictures mode', async () => {
@@ -379,6 +536,7 @@ describe('Secretcodes UI', () => {
     expect(
       wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-spymaster-highlights-toggle').exists(),
     ).toEqual(false);
+    expect(wrapper.findWhere((node) => node.prop('data-testid') === 'confirm-actions-toggle').exists()).toEqual(false);
     expect(wrapper.find('.cardIndexBadge')).toHaveLength(25);
   });
 

@@ -8,6 +8,7 @@ import { GameLayout } from 'gamesShared/components/fbg/GameLayout';
 import { Lobby } from './Lobby';
 import { PlayBoard } from './PlayBoard';
 import { useCurrentGameTranslation } from 'infra/i18n';
+import { loadSecretcodesChatSoundsPreference, persistSecretcodesChatSoundsPreference } from './preferences';
 
 interface IBoardProps {
   G: IG;
@@ -23,11 +24,21 @@ interface IBoardProps {
 
 export function Board({ G, ctx, moves, events, playerID, gameArgs, isActive }: IBoardProps) {
   const { translate } = useCurrentGameTranslation();
+  const [chatSoundEnabled, setChatSoundEnabled] = React.useState(true);
+
+  React.useEffect(() => {
+    setChatSoundEnabled(loadSecretcodesChatSoundsPreference());
+  }, []);
 
   const isHost = () =>
     gameArgs?.mode === GameMode.OnlineFriend
       ? (gameArgs?.hostPlayerID ?? G.hostPlayerID) === playerID
       : playerID === '0';
+
+  const updateChatSoundEnabled = React.useCallback((value: boolean) => {
+    persistSecretcodesChatSoundsPreference(value);
+    setChatSoundEnabled(value);
+  }, []);
 
   const _renderLobby = () => {
     return (
@@ -47,6 +58,8 @@ export function Board({ G, ctx, moves, events, playerID, gameArgs, isActive }: I
         isActive={isActive}
         isHost={isHost()}
         isGameOver={isGameOver}
+        chatSoundEnabled={chatSoundEnabled}
+        setChatSoundEnabled={updateChatSoundEnabled}
       />
     );
   };
@@ -73,7 +86,14 @@ export function Board({ G, ctx, moves, events, playerID, gameArgs, isActive }: I
   };
 
   if (ctx.gameover)
-    return <GameLayout gameOver={_getGameOverText()} extraCardContent={_getScoreBoard()} gameArgs={gameArgs} />;
+    return (
+      <GameLayout
+        gameOver={_getGameOverText()}
+        extraCardContent={_getScoreBoard()}
+        gameArgs={gameArgs}
+        chatSoundEnabled={chatSoundEnabled}
+      />
+    );
 
   let content;
   if (ctx.phase === Phases.lobby) {
@@ -82,7 +102,7 @@ export function Board({ G, ctx, moves, events, playerID, gameArgs, isActive }: I
     content = _renderPlayBoard();
   }
   return (
-    <GameLayout gameArgs={gameArgs} maxWidth="1000px">
+    <GameLayout gameArgs={gameArgs} maxWidth="1000px" chatSoundEnabled={chatSoundEnabled}>
       {content}
     </GameLayout>
   );

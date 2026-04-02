@@ -396,5 +396,11 @@ describe('secret codes rules', () => {
 
     expect(spectatorView.cards[0].color).toEqual(CardColor.blue);
     expect(spectatorView.cards[1].color).toBeUndefined();
+    expect(spectatorView.remainingCardCounts).toEqual({
+      blue: 0,
+      red: 24,
+      civilian: 0,
+      assassin: 0,
+    });
   });
 });

@@ -14,6 +14,7 @@ interface IGameLayoutProps {
   avoidOverscrollReload?: boolean;
   optionsMenuItems?: () => IOptionsItems[];
   extraCardContent?: React.ReactNode;
+  chatSoundEnabled?: boolean;
 }
 
 const enhance = compose<IGameLayoutProps, IGameLayoutProps>(withNotificationsUiProvider, setDisplayName('GameLayout'));
@@ -29,6 +30,7 @@ const GameLayoutInternal: VFC<IGameLayoutProps> = (props) => {
       maxWidth={props.maxWidth}
       avoidOverscrollReload={props.avoidOverscrollReload}
       gameArgs={props.gameArgs}
+      chatSoundEnabled={props.chatSoundEnabled}
     >
       {props.children}
     </GameDarkSublayout>

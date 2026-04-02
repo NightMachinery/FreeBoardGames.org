@@ -6,6 +6,7 @@ import {
   getActiveGuessers,
   getCurrentTeam,
   getOtherTeam,
+  getRemainingCardCounts,
   getTeamByColor,
   makeCard,
   makeTeam,
@@ -60,6 +61,7 @@ const GameConfig: Game<IG> = {
     const { cards } = G;
     return {
       ...G,
+      remainingCardCounts: getRemainingCardCounts(G),
       cards: cards.map((card: Card) => {
         let c: Card = {
           word: card.word,

@@ -1,4 +1,4 @@
-import { IG, TeamColor, Team, CardColor, Card } from './definitions';
+import { IG, TeamColor, Team, CardColor, Card, RemainingCardCounts } from './definitions';
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { Ctx } from 'boardgame.io';
 
@@ -161,6 +161,25 @@ export function getOtherTeam(G: IG, team: Team): Team | undefined {
 
 export function makeCard(word: string): Card {
   return { word, color: CardColor.civilian, revealed: false };
+}
+
+export function getRemainingCardCounts(G: IG): RemainingCardCounts {
+  return G.cards.reduce(
+    (counts, card) => {
+      if (card.revealed || !card.color) {
+        return counts;
+      }
+
+      counts[card.color] += 1;
+      return counts;
+    },
+    {
+      blue: 0,
+      red: 0,
+      civilian: 0,
+      assassin: 0,
+    } as RemainingCardCounts,
+  );
 }
 
 export function makeTeam(color: TeamColor): Team {
