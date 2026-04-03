@@ -276,6 +276,7 @@ describe('Secretcodes UI', () => {
     const board = wrapper.find('.boardPictures').first();
     const badges = wrapper.find('.cardIndexBadge');
 
+    expect(wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-settings-card').exists()).toEqual(true);
     expect(board.prop('style')).toMatchObject({ '--pictures-columns': 5 });
     expect(badges).toHaveLength(25);
     expect(badges.at(0).text()).toEqual('1');
@@ -308,7 +309,7 @@ describe('Secretcodes UI', () => {
     expect(wrapper.find('.cardIndexBadge')).toHaveLength(0);
   });
 
-  it('should persist the picture cards per row preference and restore it on remount', async () => {
+  it('should persist the picture cards per row preference, support 2 per row, and restore it on remount', async () => {
     mockAvailablePicturesManifest();
 
     state.ctx = { ...state.ctx, currentPlayer: '0' };
@@ -319,11 +320,11 @@ describe('Secretcodes UI', () => {
     wrapper.update();
 
     const slider = wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-slider').first();
-    slider.prop('onChange')?.({} as any, 7);
+    slider.prop('onChange')?.({} as any, 2);
     wrapper.update();
 
-    expect(JSON.parse(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(7);
-    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 7 });
+    expect(JSON.parse(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(2);
+    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 2 });
     expect(wrapper.find('.cardIndexBadge').at(0).text()).toEqual('1');
     expect(wrapper.find('.cardIndexBadge').at(24).text()).toEqual('25');
 
@@ -331,7 +332,42 @@ describe('Secretcodes UI', () => {
     await new Promise(setImmediate);
     wrapper.update();
 
-    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 7 });
+    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 2 });
+  });
+
+  it('should adjust picture cards per row with stepper buttons and clamp at the supported limits', async () => {
+    mockAvailablePicturesManifest();
+
+    state.ctx = { ...state.ctx, currentPlayer: '0' };
+    state.G = { ...state.G, picturesMode: true, picturesSeed: 'seed' };
+
+    const wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    const getValue = () =>
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-value').text();
+    const decrease = () =>
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-decrease').first();
+    const increase = () =>
+      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-increase').first();
+
+    expect(getValue()).toEqual('5');
+
+    decrease().simulate('click');
+    decrease().simulate('click');
+    decrease().simulate('click');
+    wrapper.update();
+
+    expect(getValue()).toEqual('2');
+    expect(JSON.parse(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(2);
+    expect(decrease().prop('disabled')).toEqual(true);
+
+    increase().simulate('click');
+    wrapper.update();
+
+    expect(getValue()).toEqual('3');
+    expect(JSON.parse(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(3);
   });
 
   it('should default confirm actions on for mobile and off for desktop when unset', () => {

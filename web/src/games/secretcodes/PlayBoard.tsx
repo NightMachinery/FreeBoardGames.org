@@ -72,7 +72,7 @@ interface IPlayBoardState {
 }
 
 const DEFAULT_PICTURE_CARDS_PER_ROW = 5;
-const MIN_PICTURE_CARDS_PER_ROW = 3;
+const MIN_PICTURE_CARDS_PER_ROW = 2;
 const MAX_PICTURE_CARDS_PER_ROW = 10;
 
 function clampPictureCardsPerRow(value: unknown): number {
@@ -232,6 +232,12 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
   _setPictureCardsPerRow = (_: unknown, newValue: number | number[]) => {
     const pictureCardsPerRow = clampPictureCardsPerRow(Array.isArray(newValue) ? newValue[0] : newValue);
+    persistPictureCardsPerRowPreference(pictureCardsPerRow);
+    this.setState({ pictureCardsPerRow });
+  };
+
+  _changePictureCardsPerRowBy = (delta: number) => {
+    const pictureCardsPerRow = clampPictureCardsPerRow(this.state.pictureCardsPerRow + delta);
     persistPictureCardsPerRowPreference(pictureCardsPerRow);
     this.setState({ pictureCardsPerRow });
   };
@@ -454,21 +460,6 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
   _renderControls = () => {
     const controlToggles = [
-      this.props.G.picturesMode ? (
-        <FormControlLabel
-          key="picture-numbers"
-          className={css.controlToggle}
-          data-testid="picture-card-numbers-toggle"
-          control={
-            <Switch
-              checked={this.state.pictureCardNumbersVisible}
-              onChange={this._setPictureCardNumbersVisible}
-              color="primary"
-            />
-          }
-          label={this.props.translate('show_picture_numbers')}
-        />
-      ) : null,
       !this.props.isGameOver ? (
         <FormControlLabel
           key="confirm-actions"
@@ -513,34 +504,83 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     return (
       <div className={css.boardControls}>
         {this.props.G.picturesMode ? (
-          <div className={css.pictureControls}>
-            <p className={css.pictureControlLabel}>
-              {this.props.translate('pictures_mode_images_per_row')} {this.state.pictureCardsPerRow}
-            </p>
-            <Slider
-              data-testid="pictures-cards-per-row-slider"
-              value={this.state.pictureCardsPerRow}
-              min={MIN_PICTURE_CARDS_PER_ROW}
-              max={MAX_PICTURE_CARDS_PER_ROW}
-              step={1}
-              valueLabelDisplay="auto"
-              onChange={this._setPictureCardsPerRow}
-              aria-label={this.props.translate('pictures_mode_images_per_row')}
-            />
-            {isPlayerSpymaster(this.props.G, this._playerID()) && !this.props.isGameOver ? (
+          <div className={css.pictureControls} data-testid="pictures-settings-card">
+            <div className={css.pictureControlsHeader}>
+              <div>
+                <p className={css.pictureControlEyebrow}>{this.props.translate('pictures_mode')}</p>
+                <p className={css.pictureControlLabel}>{this.props.translate('pictures_mode_images_per_row')}</p>
+              </div>
+              <span className={css.pictureControlValue} data-testid="pictures-cards-per-row-value">
+                {this.state.pictureCardsPerRow}
+              </span>
+            </div>
+            <div className={css.pictureSliderRow}>
+              <Button
+                className={css.pictureStepperButton}
+                data-testid="pictures-cards-per-row-decrease"
+                variant="outlined"
+                onClick={() => this._changePictureCardsPerRowBy(-1)}
+                disabled={this.state.pictureCardsPerRow <= MIN_PICTURE_CARDS_PER_ROW}
+                aria-label={`${this.props.translate('pictures_mode_images_per_row')} -`}
+              >
+                −
+              </Button>
+              <Slider
+                data-testid="pictures-cards-per-row-slider"
+                value={this.state.pictureCardsPerRow}
+                min={MIN_PICTURE_CARDS_PER_ROW}
+                max={MAX_PICTURE_CARDS_PER_ROW}
+                step={1}
+                valueLabelDisplay="auto"
+                onChange={this._setPictureCardsPerRow}
+                aria-label={this.props.translate('pictures_mode_images_per_row')}
+                classes={{
+                  root: css.pictureSlider,
+                  rail: css.pictureSliderRail,
+                  track: css.pictureSliderTrack,
+                  thumb: css.pictureSliderThumb,
+                  valueLabel: css.pictureSliderValueLabel,
+                }}
+              />
+              <Button
+                className={css.pictureStepperButton}
+                data-testid="pictures-cards-per-row-increase"
+                variant="outlined"
+                onClick={() => this._changePictureCardsPerRowBy(1)}
+                disabled={this.state.pictureCardsPerRow >= MAX_PICTURE_CARDS_PER_ROW}
+                aria-label={`${this.props.translate('pictures_mode_images_per_row')} +`}
+              >
+                +
+              </Button>
+            </div>
+            <div className={css.pictureControlToggles}>
               <FormControlLabel
-                className={[css.controlToggle, css.pictureHighlightsToggle].join(' ')}
-                data-testid="pictures-spymaster-highlights-toggle"
+                className={css.controlToggle}
+                data-testid="picture-card-numbers-toggle"
                 control={
                   <Switch
-                    checked={this.state.spymasterPictureHighlights}
-                    onChange={this._setSpymasterPictureHighlights}
+                    checked={this.state.pictureCardNumbersVisible}
+                    onChange={this._setPictureCardNumbersVisible}
                     color="primary"
                   />
                 }
-                label={this.props.translate('pictures_mode_color_highlights')}
+                label={this.props.translate('show_picture_numbers')}
               />
-            ) : null}
+              {isPlayerSpymaster(this.props.G, this._playerID()) && !this.props.isGameOver ? (
+                <FormControlLabel
+                  className={css.controlToggle}
+                  data-testid="pictures-spymaster-highlights-toggle"
+                  control={
+                    <Switch
+                      checked={this.state.spymasterPictureHighlights}
+                      onChange={this._setSpymasterPictureHighlights}
+                      color="primary"
+                    />
+                  }
+                  label={this.props.translate('pictures_mode_color_highlights')}
+                />
+              ) : null}
+            </div>
           </div>
         ) : null}
         <div className={css.controlToggles}>{controlToggles}</div>
