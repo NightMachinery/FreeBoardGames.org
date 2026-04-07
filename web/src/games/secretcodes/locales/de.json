@@ -20,6 +20,7 @@
   "pictures_mode_requires_images": "Der Bildermodus benötigt mindestens 25 Bilder in CODENAMES_PICTURES_DIR (gefunden: {{ count }}).",
   "pictures_mode_unavailable": "Bildermodus-Ressourcen sind nicht verfügbar.",
   "show_picture_numbers": "Bildnummern anzeigen",
+  "cards_per_row": "Karten pro Zeile",
   "confirm_guessing_and_passing": "Raten und Passen bestätigen",
   "chat_sounds": "Chat-Sounds",
   "card_choice_sounds": "Kartenauswahl-Sounds",

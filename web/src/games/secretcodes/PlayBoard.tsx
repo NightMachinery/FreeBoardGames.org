@@ -38,6 +38,7 @@ import {
   persistSecretcodesPictureCardNumbersVisiblePreference,
   PICTURE_CARDS_PER_ROW_STORAGE_KEY,
   SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY,
+  WORDS_CARDS_PER_ROW_STORAGE_KEY,
 } from './preferences';
 import { playSecretcodesCardChoiceSound } from './sound';
 
@@ -65,6 +66,7 @@ interface IPlayBoardState {
   picturesAvailable: boolean;
   pictureImageIds: string[];
   pictureCardsPerRow: number;
+  wordCardsPerRow: number;
   pictureCardNumbersVisible: boolean;
   confirmActionsEnabled: boolean;
   cardChoiceSoundsEnabled: boolean;
@@ -84,13 +86,13 @@ function clampPictureCardsPerRow(value: unknown): number {
   return Math.min(MAX_PICTURE_CARDS_PER_ROW, Math.max(MIN_PICTURE_CARDS_PER_ROW, Math.round(parsedValue)));
 }
 
-function loadPictureCardsPerRowPreference(): number {
+function loadCardsPerRowPreference(storageKey: string): number {
   if (typeof window === 'undefined') {
     return DEFAULT_PICTURE_CARDS_PER_ROW;
   }
 
   try {
-    const storedValue = localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY);
+    const storedValue = localStorage.getItem(storageKey);
     if (storedValue === null) {
       return DEFAULT_PICTURE_CARDS_PER_ROW;
     }
@@ -101,13 +103,13 @@ function loadPictureCardsPerRowPreference(): number {
   }
 }
 
-function persistPictureCardsPerRowPreference(value: number) {
+function persistCardsPerRowPreference(storageKey: string, value: number) {
   if (typeof window === 'undefined') {
     return;
   }
 
   try {
-    localStorage.setItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY, JSON.stringify(clampPictureCardsPerRow(value)));
+    localStorage.setItem(storageKey, JSON.stringify(clampPictureCardsPerRow(value)));
   } catch {}
 }
 
@@ -146,6 +148,7 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     picturesAvailable: !this.props.G.picturesMode,
     pictureImageIds: [],
     pictureCardsPerRow: DEFAULT_PICTURE_CARDS_PER_ROW,
+    wordCardsPerRow: DEFAULT_PICTURE_CARDS_PER_ROW,
     pictureCardNumbersVisible: true,
     confirmActionsEnabled: false,
     cardChoiceSoundsEnabled: true,
@@ -153,7 +156,8 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
   };
 
   componentDidMount() {
-    const pictureCardsPerRow = loadPictureCardsPerRowPreference();
+    const pictureCardsPerRow = loadCardsPerRowPreference(PICTURE_CARDS_PER_ROW_STORAGE_KEY);
+    const wordCardsPerRow = loadCardsPerRowPreference(WORDS_CARDS_PER_ROW_STORAGE_KEY);
     const spymasterPictureHighlights = loadSpymasterPictureHighlightsPreference();
     const pictureCardNumbersVisible = loadSecretcodesPictureCardNumbersVisiblePreference();
     const confirmActionsEnabled = loadSecretcodesConfirmActionsPreference();
@@ -161,6 +165,7 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
     this.setState({
       pictureCardsPerRow,
+      wordCardsPerRow,
       spymasterPictureHighlights,
       pictureCardNumbersVisible,
       confirmActionsEnabled,
@@ -178,8 +183,9 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     }
 
     if (
-      prevProps.G.lastSelectedCardIndex !== this.props.G.lastSelectedCardIndex &&
-      this.props.G.lastSelectedCardIndex !== null &&
+      prevProps.G.lastActionId !== this.props.G.lastActionId &&
+      this.props.G.lastActionId > 0 &&
+      this.props.G.lastActionType !== null &&
       this.state.cardChoiceSoundsEnabled
     ) {
       playSecretcodesCardChoiceSound();
@@ -230,16 +236,22 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     return true;
   };
 
-  _setPictureCardsPerRow = (_: unknown, newValue: number | number[]) => {
-    const pictureCardsPerRow = clampPictureCardsPerRow(Array.isArray(newValue) ? newValue[0] : newValue);
-    persistPictureCardsPerRowPreference(pictureCardsPerRow);
-    this.setState({ pictureCardsPerRow });
+  _cardsPerRowStorageKey = (): string =>
+    this.props.G.picturesMode ? PICTURE_CARDS_PER_ROW_STORAGE_KEY : WORDS_CARDS_PER_ROW_STORAGE_KEY;
+
+  _getCardsPerRow = (): number =>
+    this.props.G.picturesMode ? this.state.pictureCardsPerRow : this.state.wordCardsPerRow;
+
+  _setCardsPerRow = (_: unknown, newValue: number | number[]) => {
+    const cardsPerRow = clampPictureCardsPerRow(Array.isArray(newValue) ? newValue[0] : newValue);
+    persistCardsPerRowPreference(this._cardsPerRowStorageKey(), cardsPerRow);
+    this.setState(this.props.G.picturesMode ? { pictureCardsPerRow: cardsPerRow } : { wordCardsPerRow: cardsPerRow });
   };
 
-  _changePictureCardsPerRowBy = (delta: number) => {
-    const pictureCardsPerRow = clampPictureCardsPerRow(this.state.pictureCardsPerRow + delta);
-    persistPictureCardsPerRowPreference(pictureCardsPerRow);
-    this.setState({ pictureCardsPerRow });
+  _changeCardsPerRowBy = (delta: number) => {
+    const cardsPerRow = clampPictureCardsPerRow(this._getCardsPerRow() + delta);
+    persistCardsPerRowPreference(this._cardsPerRowStorageKey(), cardsPerRow);
+    this.setState(this.props.G.picturesMode ? { pictureCardsPerRow: cardsPerRow } : { wordCardsPerRow: cardsPerRow });
   };
 
   _setSpymasterPictureHighlights = (_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
@@ -459,6 +471,10 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
   };
 
   _renderControls = () => {
+    const cardsPerRow = this._getCardsPerRow();
+    const cardsPerRowLabel = this.props.G.picturesMode
+      ? this.props.translate('pictures_mode_images_per_row')
+      : this.props.translate('cards_per_row');
     const controlToggles = [
       !this.props.isGameOver ? (
         <FormControlLabel
@@ -503,56 +519,58 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
 
     return (
       <div className={css.boardControls}>
-        {this.props.G.picturesMode ? (
-          <div className={css.pictureControls} data-testid="pictures-settings-card">
-            <div className={css.pictureControlsHeader}>
-              <div>
+        <div className={css.pictureControls} data-testid="cards-per-row-settings-card">
+          <div className={css.pictureControlsHeader}>
+            <div>
+              {this.props.G.picturesMode ? (
                 <p className={css.pictureControlEyebrow}>{this.props.translate('pictures_mode')}</p>
-                <p className={css.pictureControlLabel}>{this.props.translate('pictures_mode_images_per_row')}</p>
-              </div>
-              <span className={css.pictureControlValue} data-testid="pictures-cards-per-row-value">
-                {this.state.pictureCardsPerRow}
-              </span>
+              ) : null}
+              <p className={css.pictureControlLabel}>{cardsPerRowLabel}</p>
             </div>
-            <div className={css.pictureSliderRow}>
-              <Button
-                className={css.pictureStepperButton}
-                data-testid="pictures-cards-per-row-decrease"
-                variant="outlined"
-                onClick={() => this._changePictureCardsPerRowBy(-1)}
-                disabled={this.state.pictureCardsPerRow <= MIN_PICTURE_CARDS_PER_ROW}
-                aria-label={`${this.props.translate('pictures_mode_images_per_row')} -`}
-              >
-                −
-              </Button>
-              <Slider
-                data-testid="pictures-cards-per-row-slider"
-                value={this.state.pictureCardsPerRow}
-                min={MIN_PICTURE_CARDS_PER_ROW}
-                max={MAX_PICTURE_CARDS_PER_ROW}
-                step={1}
-                valueLabelDisplay="auto"
-                onChange={this._setPictureCardsPerRow}
-                aria-label={this.props.translate('pictures_mode_images_per_row')}
-                classes={{
-                  root: css.pictureSlider,
-                  rail: css.pictureSliderRail,
-                  track: css.pictureSliderTrack,
-                  thumb: css.pictureSliderThumb,
-                  valueLabel: css.pictureSliderValueLabel,
-                }}
-              />
-              <Button
-                className={css.pictureStepperButton}
-                data-testid="pictures-cards-per-row-increase"
-                variant="outlined"
-                onClick={() => this._changePictureCardsPerRowBy(1)}
-                disabled={this.state.pictureCardsPerRow >= MAX_PICTURE_CARDS_PER_ROW}
-                aria-label={`${this.props.translate('pictures_mode_images_per_row')} +`}
-              >
-                +
-              </Button>
-            </div>
+            <span className={css.pictureControlValue} data-testid="cards-per-row-value">
+              {cardsPerRow}
+            </span>
+          </div>
+          <div className={css.pictureSliderRow}>
+            <Button
+              className={css.pictureStepperButton}
+              data-testid="cards-per-row-decrease"
+              variant="outlined"
+              onClick={() => this._changeCardsPerRowBy(-1)}
+              disabled={cardsPerRow <= MIN_PICTURE_CARDS_PER_ROW}
+              aria-label={`${cardsPerRowLabel} -`}
+            >
+              −
+            </Button>
+            <Slider
+              data-testid="cards-per-row-slider"
+              value={cardsPerRow}
+              min={MIN_PICTURE_CARDS_PER_ROW}
+              max={MAX_PICTURE_CARDS_PER_ROW}
+              step={1}
+              valueLabelDisplay="auto"
+              onChange={this._setCardsPerRow}
+              aria-label={cardsPerRowLabel}
+              classes={{
+                root: css.pictureSlider,
+                rail: css.pictureSliderRail,
+                track: css.pictureSliderTrack,
+                thumb: css.pictureSliderThumb,
+                valueLabel: css.pictureSliderValueLabel,
+              }}
+            />
+            <Button
+              className={css.pictureStepperButton}
+              data-testid="cards-per-row-increase"
+              variant="outlined"
+              onClick={() => this._changeCardsPerRowBy(1)}
+              disabled={cardsPerRow >= MAX_PICTURE_CARDS_PER_ROW}
+              aria-label={`${cardsPerRowLabel} +`}
+            >
+              +
+            </Button>
+          </div>
+          {this.props.G.picturesMode ? (
             <div className={css.pictureControlToggles}>
               <FormControlLabel
                 className={css.controlToggle}
@@ -581,8 +599,8 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
                 />
               ) : null}
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
         <div className={css.controlToggles}>{controlToggles}</div>
       </div>
     );
@@ -591,9 +609,7 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
   _renderCardGrid = () => {
     const board = [];
     const boardClasses = [css.board];
-    const boardStyle = this.props.G.picturesMode
-      ? ({ ['--pictures-columns' as '--pictures-columns']: this.state.pictureCardsPerRow } as React.CSSProperties)
-      : undefined;
+    const boardStyle = { ['--board-columns' as '--board-columns']: this._getCardsPerRow() } as React.CSSProperties;
     if (this.props.G.picturesMode) {
       boardClasses.push(css.boardPictures);
     }

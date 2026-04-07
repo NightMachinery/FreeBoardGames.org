@@ -20,6 +20,7 @@
   "pictures_mode_requires_images": "O modo com imagens precisa de pelo menos 25 imagens em CODENAMES_PICTURES_DIR (encontradas: {{ count }}).",
   "pictures_mode_unavailable": "Os recursos do modo com imagens não estão disponíveis.",
   "show_picture_numbers": "Mostrar números das imagens",
+  "cards_per_row": "Cartas por linha",
   "confirm_guessing_and_passing": "Confirmar palpites e passar",
   "chat_sounds": "Sons do chat",
   "card_choice_sounds": "Sons de escolha de carta",

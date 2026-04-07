@@ -141,6 +141,8 @@ describe('secret codes rules', () => {
         picturesSeed: 'seed',
         hostPlayerID: '0',
         currentTeamIndex: 0,
+        lastActionId: 1,
+        lastActionType: 'guess',
         lastSelectedCardIndex: 1,
         lastSelectedCardTeamColor: TeamColor.Blue,
       },
@@ -324,6 +326,8 @@ describe('secret codes rules', () => {
     expect(pass(state.G, { ...state.ctx, playerID: '2' } as Ctx)).toEqual(INVALID_MOVE);
 
     chooseCard(state.G, { ...state.ctx, playerID: '1' } as Ctx, 0);
+    expect(state.G.lastActionType).toEqual('guess');
+    expect(state.G.lastActionId).toEqual(1);
     expect(state.G.lastSelectedCardIndex).toEqual(0);
   });
 
@@ -346,7 +350,32 @@ describe('secret codes rules', () => {
 
     chooseCard(state.G, { ...state.ctx, playerID: '1' } as Ctx, 0);
 
+    expect(state.G.lastActionType).toEqual('guess');
+    expect(state.G.lastActionId).toEqual(1);
     expect(state.G.lastSelectedCardIndex).toEqual(0);
+  });
+
+  it('should mark passes as action cues too', () => {
+    const client = Client({
+      game: SecretcodesGame,
+      numPlayers: 4,
+    }) as any;
+    const state = client.store.getState();
+    state.G = {
+      ...state.G,
+      hostPlayerID: '0',
+      currentTeamIndex: 0,
+      teams: [
+        { color: TeamColor.Blue, playersID: ['0', '1'], spymasterIDs: ['0'], representativeIDs: [] },
+        { color: TeamColor.Red, playersID: ['2', '3'], spymasterIDs: ['2'], representativeIDs: [] },
+      ],
+    };
+    state.ctx = { ...state.ctx, events: { endPhase: jest.fn() } };
+
+    pass(state.G, { ...state.ctx, playerID: '1' } as Ctx);
+
+    expect(state.G.lastActionType).toEqual('pass');
+    expect(state.G.lastActionId).toEqual(1);
   });
 
   it('should move a player between roles instead of allowing spymaster and representative overlap', () => {

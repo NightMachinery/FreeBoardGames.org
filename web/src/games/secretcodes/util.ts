@@ -111,6 +111,7 @@ export function pass(G: IG, ctx: Ctx) {
     return INVALID_MOVE;
   }
 
+  markLastAction(G, 'pass');
   return passTurn(G, ctx);
 }
 
@@ -135,6 +136,7 @@ export function chooseCard(G: IG, ctx: Ctx, cardIndex: number) {
   const newCards = [...G.cards];
   newCards[cardIndex] = { ...newCards[cardIndex], revealed: true };
   G.cards = newCards;
+  markLastAction(G, 'guess');
   G.lastSelectedCardIndex = cardIndex;
   G.lastSelectedCardTeamColor = team?.color ?? null;
   const color = getCardColorByTeamColor(team.color);
@@ -161,6 +163,11 @@ export function getOtherTeam(G: IG, team: Team): Team | undefined {
 
 export function makeCard(word: string): Card {
   return { word, color: CardColor.civilian, revealed: false };
+}
+
+function markLastAction(G: IG, actionType: 'guess' | 'pass') {
+  G.lastActionId += 1;
+  G.lastActionType = actionType;
 }
 
 export function getRemainingCardCounts(G: IG): RemainingCardCounts {

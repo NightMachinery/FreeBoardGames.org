@@ -15,6 +15,7 @@ import {
   PICTURE_CARD_NUMBERS_VISIBLE_STORAGE_KEY,
   PICTURE_CARDS_PER_ROW_STORAGE_KEY,
   SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY,
+  WORDS_CARDS_PER_ROW_STORAGE_KEY,
 } from './preferences';
 
 const originalFetch = (global as any).fetch;
@@ -276,8 +277,10 @@ describe('Secretcodes UI', () => {
     const board = wrapper.find('.boardPictures').first();
     const badges = wrapper.find('.cardIndexBadge');
 
-    expect(wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-settings-card').exists()).toEqual(true);
-    expect(board.prop('style')).toMatchObject({ '--pictures-columns': 5 });
+    expect(wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-settings-card').exists()).toEqual(
+      true,
+    );
+    expect(board.prop('style')).toMatchObject({ '--board-columns': 5 });
     expect(badges).toHaveLength(25);
     expect(badges.at(0).text()).toEqual('1');
     expect(badges.at(24).text()).toEqual('25');
@@ -319,12 +322,12 @@ describe('Secretcodes UI', () => {
     await new Promise(setImmediate);
     wrapper.update();
 
-    const slider = wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-slider').first();
+    const slider = wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-slider').first();
     slider.prop('onChange')?.({} as any, 2);
     wrapper.update();
 
     expect(JSON.parse(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(2);
-    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 2 });
+    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--board-columns': 2 });
     expect(wrapper.find('.cardIndexBadge').at(0).text()).toEqual('1');
     expect(wrapper.find('.cardIndexBadge').at(24).text()).toEqual('25');
 
@@ -332,7 +335,7 @@ describe('Secretcodes UI', () => {
     await new Promise(setImmediate);
     wrapper.update();
 
-    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--pictures-columns': 2 });
+    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--board-columns': 2 });
   });
 
   it('should adjust picture cards per row with stepper buttons and clamp at the supported limits', async () => {
@@ -345,12 +348,9 @@ describe('Secretcodes UI', () => {
     await new Promise(setImmediate);
     wrapper.update();
 
-    const getValue = () =>
-      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-value').text();
-    const decrease = () =>
-      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-decrease').first();
-    const increase = () =>
-      wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-increase').first();
+    const getValue = () => wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-value').text();
+    const decrease = () => wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-decrease').first();
+    const increase = () => wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-increase').first();
 
     expect(getValue()).toEqual('5');
 
@@ -368,6 +368,67 @@ describe('Secretcodes UI', () => {
 
     expect(getValue()).toEqual('3');
     expect(JSON.parse(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(3);
+  });
+
+  it('should show cards-per-row controls in words mode, persist them separately, and restore them on remount', () => {
+    state.ctx = { ...state.ctx, currentPlayer: '1' };
+
+    let wrapper = render(client, state);
+    wrapper.update();
+
+    expect(wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-settings-card').exists()).toEqual(
+      true,
+    );
+    expect(wrapper.find('.board').first().prop('style')).toMatchObject({ '--board-columns': 5 });
+
+    const slider = wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-slider').first();
+    slider.prop('onChange')?.({} as any, 4);
+    wrapper.update();
+
+    expect(JSON.parse(localStorage.getItem(WORDS_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(4);
+    expect(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)).toEqual(null);
+    expect(wrapper.find('.board').first().prop('style')).toMatchObject({ '--board-columns': 4 });
+
+    wrapper = render(client, state);
+    wrapper.update();
+
+    expect(wrapper.find('.board').first().prop('style')).toMatchObject({ '--board-columns': 4 });
+  });
+
+  it('should keep word and picture cards-per-row preferences independent', async () => {
+    mockAvailablePicturesManifest();
+
+    state.ctx = { ...state.ctx, currentPlayer: '1' };
+
+    let wrapper = render(client, state);
+    wrapper
+      .findWhere((node) => node.prop('data-testid') === 'cards-per-row-slider')
+      .first()
+      .prop('onChange')?.({} as any, 4);
+    wrapper.update();
+
+    expect(JSON.parse(localStorage.getItem(WORDS_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(4);
+
+    state.G = { ...state.G, picturesMode: true, picturesSeed: 'seed' };
+    wrapper = render(client, state);
+    await new Promise(setImmediate);
+    wrapper.update();
+
+    wrapper
+      .findWhere((node) => node.prop('data-testid') === 'cards-per-row-slider')
+      .first()
+      .prop('onChange')?.({} as any, 2);
+    wrapper.update();
+
+    expect(JSON.parse(localStorage.getItem(WORDS_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(4);
+    expect(JSON.parse(localStorage.getItem(PICTURE_CARDS_PER_ROW_STORAGE_KEY)!)).toEqual(2);
+    expect(wrapper.find('.boardPictures').first().prop('style')).toMatchObject({ '--board-columns': 2 });
+
+    state.G = { ...state.G, picturesMode: false };
+    wrapper = render(client, state);
+    wrapper.update();
+
+    expect(wrapper.find('.board').first().prop('style')).toMatchObject({ '--board-columns': 4 });
   });
 
   it('should default confirm actions on for mobile and off for desktop when unset', () => {
@@ -457,14 +518,14 @@ describe('Secretcodes UI', () => {
     expect(remainingCounts).toContain('remaining_assassin: 1');
   });
 
-  it('should trigger the card choice sound only while the preference is enabled', () => {
+  it('should trigger the card choice sound for guesses only while the preference is enabled', () => {
     const soundSpy = jest.spyOn(secretcodesSound, 'playSecretcodesCardChoiceSound').mockImplementation(() => undefined);
     state.ctx = { ...state.ctx, currentPlayer: '1' };
 
     const wrapper = render(client, state);
 
     wrapper.setProps({
-      G: { ...state.G, lastSelectedCardIndex: 4 },
+      G: { ...state.G, lastActionId: 1, lastActionType: 'guess', lastSelectedCardIndex: 4 },
     });
     expect(soundSpy).toHaveBeenCalledTimes(1);
 
@@ -479,10 +540,27 @@ describe('Secretcodes UI', () => {
     wrapper.update();
 
     wrapper.setProps({
-      G: { ...state.G, lastSelectedCardIndex: 7 },
+      G: { ...state.G, lastActionId: 2, lastActionType: 'guess', lastSelectedCardIndex: 7 },
     });
     expect(soundSpy).toHaveBeenCalledTimes(1);
     expect(JSON.parse(localStorage.getItem(CARD_CHOICE_SOUNDS_STORAGE_KEY)!)).toEqual(false);
+  });
+
+  it('should trigger the card choice sound for passes, but not for unrelated rerenders', () => {
+    const soundSpy = jest.spyOn(secretcodesSound, 'playSecretcodesCardChoiceSound').mockImplementation(() => undefined);
+    state.ctx = { ...state.ctx, currentPlayer: '1' };
+
+    const wrapper = render(client, state);
+
+    wrapper.setProps({
+      G: { ...state.G, lastActionId: 1, lastActionType: 'pass' },
+    });
+    expect(soundSpy).toHaveBeenCalledTimes(1);
+
+    wrapper.setProps({
+      G: { ...state.G, lastActionId: 1, lastActionType: 'pass', currentTeamIndex: 1 },
+    });
+    expect(soundSpy).toHaveBeenCalledTimes(1);
   });
 
   it('should show the picture highlight toggle only to spymasters during live pictures mode', async () => {
@@ -566,9 +644,7 @@ describe('Secretcodes UI', () => {
     await new Promise(setImmediate);
     wrapper.update();
 
-    expect(wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-cards-per-row-slider').exists()).toEqual(
-      true,
-    );
+    expect(wrapper.findWhere((node) => node.prop('data-testid') === 'cards-per-row-slider').exists()).toEqual(true);
     expect(
       wrapper.findWhere((node) => node.prop('data-testid') === 'pictures-spymaster-highlights-toggle').exists(),
     ).toEqual(false);

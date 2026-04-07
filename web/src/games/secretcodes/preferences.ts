@@ -1,6 +1,7 @@
 import { detectIsMobile } from 'infra/common/device/detectIsMobile';
 
 export const PICTURE_CARDS_PER_ROW_STORAGE_KEY = 'secretcodesPicturesCardsPerRow';
+export const WORDS_CARDS_PER_ROW_STORAGE_KEY = 'secretcodesWordsCardsPerRow';
 export const SPYMASTER_PICTURE_HIGHLIGHTS_STORAGE_KEY = 'secretcodesSpymasterPictureHighlights';
 export const PICTURE_CARD_NUMBERS_VISIBLE_STORAGE_KEY = 'secretcodesPictureCardNumbersVisible';
 export const CONFIRM_ACTIONS_STORAGE_KEY = 'secretcodesConfirmActionsEnabled';

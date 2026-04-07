@@ -20,6 +20,7 @@
   "pictures_mode_requires_images": "Pictures mode requires at least 25 images in CODENAMES_PICTURES_DIR (found {{ count }}).",
   "pictures_mode_unavailable": "Pictures mode assets are unavailable.",
   "show_picture_numbers": "Show picture numbers",
+  "cards_per_row": "Cards per row",
   "confirm_guessing_and_passing": "Confirm guessing and passing",
   "chat_sounds": "Chat sounds",
   "card_choice_sounds": "Card choice sounds",

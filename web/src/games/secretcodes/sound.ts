@@ -7,5 +7,6 @@ export const playSecretcodesCardChoiceSound = () => {
     cardChoiceSound = new Audio(CardSelectSound);
   }
 
-  cardChoiceSound.play();
+  cardChoiceSound.currentTime = 0;
+  void cardChoiceSound.play().catch(() => undefined);
 };

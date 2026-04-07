@@ -42,6 +42,8 @@ export interface IG {
   picturesSeed: string;
   hostPlayerID: string;
   currentTeamIndex?: number;
+  lastActionId: number;
+  lastActionType: 'guess' | 'pass' | null;
   /**
    * The index of the last card selected by any team. Null at the beggining of
    * the round.

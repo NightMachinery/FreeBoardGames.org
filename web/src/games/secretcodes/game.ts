@@ -48,6 +48,8 @@ const GameConfig: Game<IG> = {
       picturesMode,
       picturesSeed,
       hostPlayerID: customData?.hostPlayerID || '0',
+      lastActionId: 0,
+      lastActionType: null,
       lastSelectedCardIndex,
       lastSelectedCardTeamColor: null,
     };

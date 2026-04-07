@@ -3,9 +3,9 @@
 }
 
 .board {
+  --board-columns: 5;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
   grid-gap: 0.5rem;
 
   width: 100%;
@@ -13,9 +13,7 @@
 }
 
 .boardPictures {
-  --pictures-columns: 5;
   align-items: stretch;
-  grid-template-columns: repeat(var(--pictures-columns), minmax(0, 1fr));
   grid-template-rows: none;
 }
 
@@ -35,7 +33,7 @@ button.playActionBtn {
   position: relative;
 
   /* vw - 2 * margin-l + margin-r - all grid-gap / card columns*/
-  height: calc((100vw - 1.6rem - 2rem) / 5);
+  height: calc((100vw - 1.6rem - 2rem) / var(--board-columns, 5));
   max-height: 100px;
   padding: 0.2rem;
 
@@ -69,7 +67,7 @@ button.playActionBtn {
   background-color: #fff;
   color: transparent;
   fill: transparent;
-  height: calc(((100vw - 1.6rem - 2rem) / var(--pictures-columns, 5)) * 1.5);
+  height: calc(((100vw - 1.6rem - 2rem) / var(--board-columns, 5)) * 1.5);
   max-height: 150px;
 }
 
