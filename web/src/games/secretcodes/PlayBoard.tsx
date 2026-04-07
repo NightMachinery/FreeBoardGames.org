@@ -245,13 +245,23 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
   _setCardsPerRow = (_: unknown, newValue: number | number[]) => {
     const cardsPerRow = clampPictureCardsPerRow(Array.isArray(newValue) ? newValue[0] : newValue);
     persistCardsPerRowPreference(this._cardsPerRowStorageKey(), cardsPerRow);
-    this.setState(this.props.G.picturesMode ? { pictureCardsPerRow: cardsPerRow } : { wordCardsPerRow: cardsPerRow });
+
+    if (this.props.G.picturesMode) {
+      this.setState({ pictureCardsPerRow: cardsPerRow });
+    } else {
+      this.setState({ wordCardsPerRow: cardsPerRow });
+    }
   };
 
   _changeCardsPerRowBy = (delta: number) => {
     const cardsPerRow = clampPictureCardsPerRow(this._getCardsPerRow() + delta);
     persistCardsPerRowPreference(this._cardsPerRowStorageKey(), cardsPerRow);
-    this.setState(this.props.G.picturesMode ? { pictureCardsPerRow: cardsPerRow } : { wordCardsPerRow: cardsPerRow });
+
+    if (this.props.G.picturesMode) {
+      this.setState({ pictureCardsPerRow: cardsPerRow });
+    } else {
+      this.setState({ wordCardsPerRow: cardsPerRow });
+    }
   };
 
   _setSpymasterPictureHighlights = (_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
