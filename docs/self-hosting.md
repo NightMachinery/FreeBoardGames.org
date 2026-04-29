@@ -3,7 +3,9 @@
 This repo now uses one canonical self-host entrypoint:
 
 ```zsh
-./self_host.zsh [setup|redeploy|start|stop|dev-start] [public_url]
+./self_host.zsh [setup|redeploy] [public_url] [game ...]
+./self_host.zsh [start|dev-start] [public_url]
+./self_host.zsh stop
 ```
 
 Default public URL:
@@ -13,6 +15,8 @@ http://fbg.pinky.lilf.ir
 ```
 
 `public_url` may be a host-only value or an `http://` / `https://` origin. Path prefixes, query strings, and fragments are not supported.
+
+By default, `setup` and `redeploy` build only Secret Codes (`secretcodes`). Pass one or more game directory names from `web/src/games/` to deploy a different subset. The legacy/user-facing alias `secretnames` is accepted and maps to `secretcodes`.
 
 ## Requirements
 
@@ -60,18 +64,22 @@ Local state and logs live in `.self_host/`.
 ./self_host.zsh setup
 ./self_host.zsh setup http://fbg.pinky.lilf.ir
 ./self_host.zsh setup https://example.com
+./self_host.zsh setup chess tictactoe
+./self_host.zsh setup https://example.com secretcodes chess
 ```
 
-`setup` stops existing self-host sessions, persists config, installs dependencies with frozen Yarn lockfiles, builds production artifacts, updates `~/Caddyfile`, reloads or starts Caddy, then starts the production tmux sessions.
+`setup` stops existing self-host sessions, persists config, installs dependencies with frozen Yarn lockfiles, builds production artifacts for the selected games, updates `~/Caddyfile`, reloads or starts Caddy, then starts the production tmux sessions.
 
 ### `redeploy`
 
 ```zsh
 ./self_host.zsh redeploy
 ./self_host.zsh redeploy http://new-host.example
+./self_host.zsh redeploy secretnames
+./self_host.zsh redeploy http://new-host.example secretcodes chess
 ```
 
-Redeploys the latest local checkout. It does not pull from git. It rebuilds, updates Caddy, stops both production and dev sessions, then starts production.
+Redeploys the latest local checkout. It does not pull from git. It rebuilds the selected games, updates Caddy, stops both production and dev sessions, then starts production. If no games are passed, only `secretcodes` is built and deployed.
 
 ### `start`
 
@@ -80,7 +88,7 @@ Redeploys the latest local checkout. It does not pull from git. It rebuilds, upd
 ./self_host.zsh start http://new-host.example
 ```
 
-Starts from existing build artifacts and saved config. It rewrites the production Caddy block and stops any `start` or `dev-start` sessions before launching production.
+Starts from existing build artifacts and saved config. It rewrites the production Caddy block and stops any `start` or `dev-start` sessions before launching production. It does not rebuild or change which games are present in the existing artifacts.
 
 ### `dev-start`
 
@@ -89,7 +97,7 @@ Starts from existing build artifacts and saved config. It rewrites the productio
 ./self_host.zsh dev-start http://fbg.pinky.lilf.ir
 ```
 
-Starts a development-friendly deployment behind Caddy. It runs watcher/dev commands for the web server, BGIO server, and backend, and it proxies all web traffic to the dev web process instead of serving stale static assets from Caddy.
+Starts a development-friendly deployment behind Caddy. It runs watcher/dev commands for the web server, BGIO server, and backend, and it proxies all web traffic to the dev web process instead of serving stale static assets from Caddy. It does not apply `setup`/`redeploy` game filtering.
 
 ### `stop`
 

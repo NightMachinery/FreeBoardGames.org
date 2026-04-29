@@ -22,23 +22,28 @@ readonly DEV_BGIO_SESSION='fbg-selfhost-bgio-dev'
 readonly DEV_BACKEND_SESSION='fbg-selfhost-backend-dev'
 readonly CADDY_BEGIN='# BEGIN freeboardgames self-host'
 readonly CADDY_END='# END freeboardgames self-host'
+readonly DEFAULT_DEPLOY_GAMES=(secretcodes)
 
 PUBLIC_URL=''
 SITE_ADDRESS=''
 PUBLIC_HOSTPORT=''
+SELECTED_PUBLIC_URL=''
+SELECTED_GAMES=()
 
 usage() {
   cat <<USAGE
 Usage:
-  ./self_host.zsh setup [public_url]
-  ./self_host.zsh redeploy [public_url]
+  ./self_host.zsh setup [public_url] [game ...]
+  ./self_host.zsh redeploy [public_url] [game ...]
   ./self_host.zsh start [public_url]
   ./self_host.zsh dev-start [public_url]
   ./self_host.zsh stop
 
 Default public_url: $DEFAULT_PUBLIC_URL
+Default setup/redeploy games: ${DEFAULT_DEPLOY_GAMES[*]}
 
 public_url may be a full http(s) origin or a host-only value. Paths, query strings, and fragments are not supported.
+setup/redeploy game arguments are web/src/games directory names. The alias 'secretnames' maps to 'secretcodes'.
 USAGE
 }
 
@@ -311,12 +316,82 @@ install_dependencies() {
   run_in_node_shell 'cd fbg-server && yarn install --frozen-lockfile'
 }
 
+canonical_game_name() {
+  local raw="$1"
+  local normalized="${(L)raw}"
+  normalized="${normalized//-/}"
+  normalized="${normalized//_/}"
+  normalized="${normalized// /}"
+  case "$normalized" in
+    secretname|secretnames|secretcode|secretcodes)
+      print -r -- 'secretcodes'
+      ;;
+    *)
+      print -r -- "$raw"
+      ;;
+  esac
+}
+
+is_known_game() {
+  local game="$1"
+  [[ -f "$ROOT_DIR/web/src/games/$game/index.ts" ]]
+}
+
+is_url_like() {
+  local value="$1"
+  [[ "$value" == *://* || "$value" == *.* || "$value" == *:* || "$value" == localhost ]]
+}
+
+parse_deploy_args() {
+  SELECTED_PUBLIC_URL=''
+  SELECTED_GAMES=()
+
+  local total_args=$#
+  local arg raw_game game
+  for arg in "$@"; do
+    if [[ "$arg" == *,* ]] && ! is_url_like "$arg"; then
+      for raw_game in ${(s:,:)arg}; do
+        game="$(canonical_game_name "$raw_game")"
+        is_known_game "$game" || die "Unknown game '$raw_game'. Expected a directory under web/src/games/."
+        SELECTED_GAMES+=("$game")
+      done
+      continue
+    fi
+
+    game="$(canonical_game_name "$arg")"
+    if is_known_game "$game"; then
+      SELECTED_GAMES+=("$game")
+    elif [[ -z "$SELECTED_PUBLIC_URL" ]] && { (( total_args == 1 )) || is_url_like "$arg"; }; then
+      SELECTED_PUBLIC_URL="$arg"
+    else
+      die "Unknown game '$arg'. Expected a directory under web/src/games/. Put the optional public_url first if needed."
+    fi
+  done
+
+  if (( ${#SELECTED_GAMES[@]} == 0 )); then
+    SELECTED_GAMES=("${DEFAULT_DEPLOY_GAMES[@]}")
+  fi
+}
+
 build_all() {
-  note 'Generating code and building production artifacts'
-  run_in_node_shell 'yarn run codegen'
-  run_in_node_shell 'cd web && yarn run i18n:copy'
-  run_in_node_shell 'yarn run build'
-  run_in_node_shell 'cd fbg-server && yarn run build'
+  local -a games=("$@")
+  local games_csv="${(j:,:)games}"
+  local games_label="${(j:, :)games}"
+  local games_index="$ROOT_DIR/web/src/games/index.ts"
+  local games_index_backup="$STATE_DIR/games.index.ts.before-selfhost.$$"
+
+  ensure_dirs
+  note "Generating code and building production artifacts for games: $games_label"
+  cp "$games_index" "$games_index_backup"
+  {
+    run_in_node_shell "yarn run codegen ${(q)games_csv}"
+    run_in_node_shell 'cd web && yarn run i18n:copy'
+    run_in_node_shell 'yarn run build'
+    run_in_node_shell 'cd fbg-server && yarn run build'
+  } always {
+    cp "$games_index_backup" "$games_index"
+    rm -f "$games_index_backup"
+  }
 }
 
 warn_missing_picture_tools() {
@@ -381,12 +456,13 @@ configure_url() {
 }
 
 setup_cmd() {
+  parse_deploy_args "$@"
   ensure_node_shell
-  configure_url "${1:-$DEFAULT_PUBLIC_URL}"
+  configure_url "${SELECTED_PUBLIC_URL:-$DEFAULT_PUBLIC_URL}"
   load_config
   stop_all_sessions
   install_dependencies
-  build_all
+  build_all "${SELECTED_GAMES[@]}"
   write_caddy_block prod
   reload_caddy
   start_production_sessions
@@ -394,11 +470,12 @@ setup_cmd() {
 }
 
 redeploy_cmd() {
+  parse_deploy_args "$@"
   ensure_node_shell
-  configure_url "${1:-}"
+  configure_url "${SELECTED_PUBLIC_URL:-}"
   load_config
   install_dependencies
-  build_all
+  build_all "${SELECTED_GAMES[@]}"
   write_caddy_block prod
   reload_caddy
   start_production_sessions
@@ -435,13 +512,13 @@ main() {
       require_command python3
       require_command tmux
       require_command caddy
-      setup_cmd "${2:-$DEFAULT_PUBLIC_URL}"
+      setup_cmd "${@:2}"
       ;;
     redeploy)
       require_command python3
       require_command tmux
       require_command caddy
-      redeploy_cmd "${2:-}"
+      redeploy_cmd "${@:2}"
       ;;
     start)
       require_command python3
