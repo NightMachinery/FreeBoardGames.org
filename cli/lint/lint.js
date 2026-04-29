@@ -4,7 +4,7 @@ import { lintGame } from "./lint_game.js";
 import { lintAll } from "./lint_all.js";
 import chalk from "chalk";
 
-const USAGE = "Usage: yarn run lint [GAME CODE]";
+const USAGE = "Usage: pnpm run lint [GAME CODE]";
 
 function start() {
   const argv = process.argv;

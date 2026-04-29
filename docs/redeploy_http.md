@@ -11,7 +11,7 @@ It does a **real production web build** and then restarts the 3 tmux services:
 ## Prerequisites
 
 - Run from repo root: `/home/ubuntu/base/FreeBoardGames.org`
-- Use Node `16`
+- Use Node `24`
 - `.env.http.local` should exist and keep `WEB_NODE_ENV=production`
 
 ## Redeploy
@@ -20,7 +20,7 @@ It does a **real production web build** and then restarts the 3 tmux services:
 cd /home/ubuntu/base/FreeBoardGames.org
 
 source ~/.nvm/nvm.sh
-nvm use 16
+nvm use 24
 
 ./run_tmux_http.zsh stop
 ```
@@ -31,7 +31,7 @@ nvm use 16
 
 ```bash
 cd web
-./node_modules/.bin/webpack --mode production --color --progress --config webpack.server.config.js
+pnpm exec webpack --mode production --color --progress --config webpack.server.config.js
 ```
 
 ### 2) Run the full production Next build
@@ -48,15 +48,15 @@ CI=1 \
 BABEL_ENV=production \
 NODE_ENV=production \
 CHANNEL=production \
-NODE_OPTIONS=--max_old_space_size=2048 \
-./node_modules/.bin/next build
+NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=2048" \
+pnpm exec next build
 ```
 
 ### 3) Build the backend
 
 ```bash
 cd /home/ubuntu/base/FreeBoardGames.org/fbg-server
-./node_modules/.bin/nest build
+pnpm exec nest build
 ```
 
 ### 4) Start the tmux services again
@@ -68,7 +68,7 @@ cd /home/ubuntu/base/FreeBoardGames.org
 
 ## GraphQL schema/codegen note
 
-The redeploy flow runs `yarn run codegen` before the production build. Apollo codegen reads the checked-in schema at `common/gql/schema.gql`, so that schema must include any GraphQL operations used by the web client. For example, the play-again flow calls the public mutation `publicNextRoom(matchId: String!): String!`; if the schema is stale and only lists `nextRoom`, redeploy fails during `apollo client:codegen` with `Cannot query field "publicNextRoom" on type "Mutation"`.
+The redeploy flow runs `pnpm run codegen` before the production build. Apollo codegen reads the checked-in schema at `common/gql/schema.gql`, so that schema must include any GraphQL operations used by the web client. For example, the play-again flow calls the public mutation `publicNextRoom(matchId: String!): String!`; if the schema is stale and only lists `nextRoom`, redeploy fails during `apollo client:codegen` with `Cannot query field "publicNextRoom" on type "Mutation"`.
 
 ## Verify
 
@@ -88,5 +88,5 @@ Expected:
 ## Notes
 
 - Do **not** rely on the older dev-mode workaround if you want the actual latest game code live.
-- Root `yarn run build` also builds Storybook; that is not required for app redeploy.
+- Root `pnpm run build` also builds Storybook; that is not required for app redeploy.
 - If `common/gql/schema.gql` changes after backend build, that is usually generated churn from Nest GraphQL schema generation.

@@ -16,8 +16,11 @@ jobs:
     - uses: medyagh/setup-minikube@master
     - uses: actions/setup-node@v1
       with:
-        node-version: 16.x
+        node-version: 24.x
     - uses: actions/checkout@v2
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10.33.2
     - name: Build docker images
       run: ./docker-build.sh -db
     - name: Test on minikube
@@ -27,13 +30,14 @@ jobs:
     steps:
     - uses: actions/setup-node@v1
       with:
-        node-version: 16.x
+        node-version: 24.x
     - uses: actions/checkout@v2
-    - run: yarn install
-    - run: yarn run codegen
-    - run: yarn run lint 
-    - run: yarn run test 
-    - run: cd v2
-    - run: yarn install
-    - run: yarn run lint
-    - run: yarn run test
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10.33.2
+    - run: pnpm install --frozen-lockfile --prefer-offline
+    - run: pnpm run codegen
+    - run: pnpm run lint
+    - run: pnpm run test
+    - run: pnpm --dir v2 run lint
+    - run: pnpm --dir v2 run test

@@ -9,7 +9,7 @@ export function testAll() {
     `Testing ${chalk.bold(
       "EVERYTHING"
     )}... If you only care about one game, try ${chalk.inverse(
-      "yarn run test GAME"
+      "pnpm run test GAME"
     )}`
   );
   codegen();
@@ -21,7 +21,7 @@ export function testAll() {
 function test() {
   cd("web");
   shell.env["FORCE_COLOR"] = "true";
-  let cmd = "yarn run jest --silent --coverage";
+  let cmd = "pnpm run jest --silent --coverage";
   fbgRun(cmd, "Tests failed (web).");
   cd("fbg-server");
   fbgRun(cmd, "Tests failed (fbg-server).");
@@ -30,6 +30,6 @@ function test() {
 function checkCircularDependencies() {
   cd("web");
   shell.env["FORCE_COLOR"] = "true";
-  let cmd = "yarn madge --circular --extensions ts,tsx src/";
+  let cmd = "pnpm madge --circular --extensions ts,tsx src/";
   fbgRun(cmd, "Circular dependencies detected (web).");
 }

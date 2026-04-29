@@ -4,7 +4,7 @@ import { testGame } from "./test_game.js";
 import { testAll } from "./test_all.js";
 import chalk from "chalk";
 
-const USAGE = "Usage: yarn run test [GAME CODE]";
+const USAGE = "Usage: pnpm run test [GAME CODE]";
 
 function start() {
   const argv = process.argv;

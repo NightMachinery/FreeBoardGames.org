@@ -17,11 +17,11 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "cross-env NODE_ENV=production node dist/main",
-    "rimraf": "./node_modules/rimraf/bin.js",
-    "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js",
+    "rimraf": "rimraf",
+    "typeorm": "node --require ts-node/register \"$(pnpm bin)/typeorm\"",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register \"$(pnpm bin)/jest\" --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
@@ -103,5 +103,6 @@
     },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  }
+  },
+  "packageManager": "pnpm@10.33.2"
 }

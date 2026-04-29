@@ -12,5 +12,6 @@
   },
   "scripts": {
     "test": "ts-node ./main.ts"
-  }
+  },
+  "packageManager": "pnpm@10.33.2"
 }

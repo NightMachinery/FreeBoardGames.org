@@ -41,7 +41,7 @@ export function checkEnvironment() {
   if (!dirExists(path.resolve(ROOT, "node_modules"))) {
     printErr(
       `Run ${chalk.inverse(
-        "yarn install"
+        "pnpm install"
       )} on root before running this command.`
     );
     shell.exit(1);

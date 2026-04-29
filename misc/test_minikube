@@ -65,4 +65,4 @@ for i in {1..300}; do
 done
 
 cd misc/e2e
-yarn run test https://my-fbg.info
+pnpm run test https://my-fbg.info

@@ -2,7 +2,7 @@ import shell from "shelljs";
 import { printErr, checkEnvironment, decodeCsv } from "../util.js";
 import { dev } from "./dev.js";
 
-const USAGE = "Usage: yarn run dev game1,game2";
+const USAGE = "Usage: pnpm run dev game1,game2";
 
 function start() {
   const argv = process.argv;

@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 
-const USAGE = "Usage: yarn run test [URL] [HOST]";
+const USAGE = "Usage: pnpm run test [URL] [HOST]";
 const DEFAULT_URL = "https://www.freeboardgames.org";
 const ONLINE_FRIEND_CARD_XPATH = "//div[contains(., 'Online Friend')]";
 const PLAY_BUTTON_XPATH = "//Button[contains(., 'Play')]";

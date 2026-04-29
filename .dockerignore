@@ -1,0 +1,12 @@
+.git
+node_modules
+**/node_modules
+.pnpm-store
+.self_host
+dev.db
+coverage
+**/coverage
+.next
+**/.next
+dist
+**/dist

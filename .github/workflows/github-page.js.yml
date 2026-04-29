@@ -8,10 +8,13 @@ jobs:
     steps:
     - uses: actions/setup-node@v1
       with:
-        node-version: 16.x
+        node-version: 24.x
     - uses: actions/checkout@v2
-    - run: cd v2 && yarn install
-    - run: cd v2/fbg-web && yarn run build
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10.33.2
+    - run: pnpm install --frozen-lockfile --prefer-offline
+    - run: pnpm --dir v2/fbg-web run build
     - name: Pushes to github page repository
       id: push_directory
       uses: cpina/github-action-push-to-another-repository@ssh-deploy-key

@@ -16,6 +16,6 @@ function test(game, extraArgs = "") {
 
   cd("web");
   shell.env["FORCE_COLOR"] = "true";
-  let cmd = `yarn run jest src/games/${game}/ ${extraArgs}`.trim();
+  let cmd = `pnpm run jest src/games/${game}/ ${extraArgs}`.trim();
   fbgRun(cmd, `${chalk.inverse(game)}: Tests failed.`);
 }

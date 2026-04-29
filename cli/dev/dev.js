@@ -9,7 +9,7 @@ export function dev(games) {
       `Running development environment for ${chalk.bold(
         "ALL GAMES"
       )}... If you only care about few games, it is much faster to run ${chalk.inverse(
-        "yarn run dev GAME1,GAME2"
+        "pnpm run dev GAME1,GAME2"
       )}`
     );
     codegen();
@@ -25,6 +25,6 @@ export function dev(games) {
   );
   cd();
   shell.env["FORCE_COLOR"] = "true";
-  let cmd = "yarn run dev:internal";
+  let cmd = "pnpm run dev:internal";
   fbgRun(cmd, "Dev failed.");
 }

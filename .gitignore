@@ -8,7 +8,7 @@ node_modules
 server/dist/
 **/.syn
 **/.stignore
-yarn-error.log
+pnpm-debug.log
 **/.vscode
 # auto generated
 common/internal/*

@@ -19,8 +19,8 @@ if [ ! -f docker-compose.yml ]; then
     cp docker-compose.yml.example docker-compose.yml
 fi
 
-# ensure yarn and npm are installed
-yarn -v > /dev/null 2>&1 || (echo "ERROR: yarn is not installed." && exit 1)
+# ensure pnpm is installed
+pnpm -v > /dev/null 2>&1 || (echo "ERROR: pnpm is not installed." && exit 1)
 npm -v > /dev/null 2>&1  || (echo "ERROR: npm is not installed." && exit 1)
 
 # define functions
@@ -40,13 +40,13 @@ confirm() {
 run_gameserver() {
     cd "$DIR"
     echo -e "Now the game index will be generated."
-    yarn run codegen || (echo -e "ERROR. (ensure node is up-to-date)" && exit 1)
-    cd web && yarn run i18n:copy && cd -
+    pnpm run codegen || (echo -e "ERROR. (ensure node is up-to-date)" && exit 1)
+    cd web && pnpm run i18n:copy && cd -
 }
 
 install_dependencies() {
     cd "$DIR"
-    yarn install || (echo -e "ERROR. (ensure node is up-to-date)" && exit 1)
+    pnpm install || (echo -e "ERROR. (ensure node is up-to-date)" && exit 1)
 }
 
 compile_dependencies() {
@@ -57,8 +57,8 @@ compile_dependencies() {
 build_docker() {
     cd "$DIR"
     docker build -t "$BUILD_IMAGE_COMMON" "$BUILD_DIR_COMMON" || exit 1
-    docker build -t "fbg-web" -t "$BUILD_IMAGE_WEB" "$BUILD_DIR_WEB" || exit 1
-    docker build -t "fbg-server" -t "$BUILD_IMAGE_FBG" "$BUILD_DIR_FBG" || exit 1
+    docker build -f "$BUILD_DIR_WEB/Dockerfile" -t "fbg-web" -t "$BUILD_IMAGE_WEB" "$DIR" || exit 1
+    docker build -f "$BUILD_DIR_FBG/Dockerfile" -t "fbg-server" -t "$BUILD_IMAGE_FBG" "$DIR" || exit 1
     docker build -t "fbg-backuper" -t "$BUILD_IMAGE_BACKUPER" "$BUILD_DIR_BACKUPER" || exit 1
 }
 

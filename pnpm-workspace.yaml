@@ -1,0 +1,9 @@
+packages:
+  - .
+  - web
+  - fbg-server
+  - misc/e2e
+  - v2
+  - v2/fbg-bgio
+  - v2/fbg-games
+  - v2/fbg-web

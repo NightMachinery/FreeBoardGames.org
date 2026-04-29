@@ -12,9 +12,9 @@ export function fixGame(game) {
   print(`Fixing ${chalk.inverse(game)} ...`);
   cd("web");
   shell.env["FORCE_COLOR"] = "true";
-  let cmd = `yarn run eslint --fix --max-warnings=0 --ext .ts,.tsx src/games/${game}`;
+  let cmd = `pnpm run eslint --fix --max-warnings=0 --ext .ts,.tsx src/games/${game}`;
   fbgRun(cmd, fixFailed("eslint", game));
   const dir = `./src/games/${game}/**/*`;
-  cmd = `yarn run prettier --write \"${dir}.{ts,tsx,js}\"`;
+  cmd = `pnpm run prettier --write \"${dir}.{ts,tsx,js}\"`;
   fbgRun(cmd, fixFailed("prettier", game));
 }

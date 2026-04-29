@@ -6,7 +6,7 @@ export function codegen(games = []) {
   genGames(games);
   print("Generating GraphQL definitions...");
   cd("web");
-  fbgRun("yarn run apollo:codegen");
+  fbgRun("pnpm run apollo:codegen");
   print("Generating i18n translations...");
-  fbgRun("yarn run i18n:copy");
+  fbgRun("pnpm run i18n:copy");
 }

@@ -20,22 +20,22 @@ Contributions are always welcome, even if just reporting bugs (check our [issue 
 git clone https://github.com/freeboardgames/FreeBoardGames.org
 cd FreeBoardGames.org
 
-yarn install  # installs dependencies
+pnpm install  # installs dependencies
 
-yarn run dev  # runs the webserver and backend (for online multiplayer games)
+pnpm run dev  # runs the webserver and backend (for online multiplayer games)
 ```
 
 ## Important commands
 
-`yarn run dev GAME` runs the **development** environment only for a given game.
+`pnpm run dev GAME` runs the **development** environment only for a given game.
 
-`yarn run test GAME` runs unit tests and linter for given game.
+`pnpm run test GAME` runs unit tests and linter for given game.
 
-`yarn run lint GAME` runs linter for given game.
+`pnpm run lint GAME` runs linter for given game.
 
-`yarn run fix GAME` tries to automatically fix linter errors for given game.
+`pnpm run fix GAME` tries to automatically fix linter errors for given game.
 
-`yarn run ci` on root runs everything CI will run (including e2e tests).
+`pnpm run ci` on root runs everything CI will run (including e2e tests).
 
 Omitting the GAME from any command above will run it for all the codebase.
 

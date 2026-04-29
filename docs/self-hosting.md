@@ -26,11 +26,13 @@ Install these on the host:
 - `tmux`
 - `caddy`
 - `python3`
-- Node 16 available through `nvm-load` and `nvm use 16`
-- Yarn 1.x
+- Node 24 available through `nvm-load` and `nvm use 24`
+- pnpm 10.x
 - optional for Secret Codes picture mode: `avifenc` and ImageMagick `convert`
 
 If downloads need a proxy, export your proxy variables before running build commands; the script does not hardcode proxy settings.
+
+The self-host flow installs from the workspace `pnpm-lock.yaml` with `pnpm install --frozen-lockfile --prefer-offline`. pnpm hardlinks packages from its content-addressable store, and maintainers can run `pnpm dedupe` (or `pnpm dedupe --check`) when refreshing dependencies to avoid unnecessary duplicate versions.
 
 ## What runs
 
@@ -68,7 +70,7 @@ Local state and logs live in `.self_host/`.
 ./self_host.zsh setup https://example.com secretcodes chess
 ```
 
-`setup` stops existing self-host sessions, persists config, installs dependencies with frozen Yarn lockfiles, builds production artifacts for the selected games, updates `~/Caddyfile`, reloads or starts Caddy, then starts the production tmux sessions.
+`setup` stops existing self-host sessions, persists config, installs dependencies with frozen pnpm lockfile, builds production artifacts for the selected games, updates `~/Caddyfile`, reloads or starts Caddy, then starts the production tmux sessions.
 
 ### `redeploy`
 

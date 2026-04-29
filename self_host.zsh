@@ -8,6 +8,8 @@ readonly LOG_DIR="$STATE_DIR/logs"
 readonly CADDYFILE="${SELF_HOST_CADDYFILE:-$HOME/Caddyfile}"
 readonly DEFAULT_PUBLIC_URL="${SELF_HOST_PUBLIC_URL:-http://fbg.pinky.lilf.ir}"
 readonly NODE_VERSION="${SELF_HOST_NODE_VERSION:-$(<"$ROOT_DIR/.nvmrc")}"
+readonly PNPM_VERSION="${SELF_HOST_PNPM_VERSION:-10.33.2}"
+readonly PNPM_MAJOR="${PNPM_VERSION%%.*}"
 readonly DEFAULT_WEB_PORT="${SELF_HOST_WEB_PORT:-3000}"
 readonly DEFAULT_BGIO_PORT="${SELF_HOST_BGIO_PORT:-8001}"
 readonly DEFAULT_BACKEND_PORT="${SELF_HOST_BACKEND_PORT:-3001}"
@@ -170,6 +172,11 @@ ensure_node_shell() {
     || die 'nvm-load is required in zsh login shells'
 }
 
+ensure_pnpm_shell() {
+  run_in_node_shell "command -v pnpm >/dev/null 2>&1 || { command -v corepack >/dev/null 2>&1 && corepack enable >/dev/null 2>&1 && corepack prepare pnpm@${(q)PNPM_VERSION} --activate >/dev/null 2>&1; }; pnpm --version | grep -Eq '^${(q)PNPM_MAJOR}\\.'" \
+    || die "pnpm ${PNPM_MAJOR}.x is required in Node ${NODE_VERSION} shells"
+}
+
 run_in_node_shell() {
   local command_string="$1"
   zsh -lc "source ~/.shared.sh >/dev/null 2>&1 || true; nvm-load >/dev/null 2>&1; nvm use ${(q)NODE_VERSION} >/dev/null; cd ${(q)ROOT_DIR}; ${command_string}"
@@ -310,10 +317,8 @@ ensure_build_artifacts() {
 }
 
 install_dependencies() {
-  note 'Installing dependencies with frozen Yarn lockfiles'
-  run_in_node_shell 'yarn install --frozen-lockfile'
-  run_in_node_shell 'cd web && yarn install --frozen-lockfile'
-  run_in_node_shell 'cd fbg-server && yarn install --frozen-lockfile'
+  note 'Installing dependencies with frozen pnpm lockfile'
+  run_in_node_shell 'pnpm install --frozen-lockfile --prefer-offline'
 }
 
 canonical_game_name() {
@@ -384,10 +389,10 @@ build_all() {
   note "Generating code and building production artifacts for games: $games_label"
   cp "$games_index" "$games_index_backup"
   {
-    run_in_node_shell "yarn run codegen ${(q)games_csv}"
-    run_in_node_shell 'cd web && yarn run i18n:copy'
-    run_in_node_shell 'yarn run build'
-    run_in_node_shell 'cd fbg-server && yarn run build'
+    run_in_node_shell "pnpm run codegen ${(q)games_csv}"
+    run_in_node_shell 'pnpm --dir web run i18n:copy'
+    run_in_node_shell 'pnpm run build'
+    run_in_node_shell 'pnpm --dir fbg-server run build'
   } always {
     cp "$games_index_backup" "$games_index"
     rm -f "$games_index_backup"
@@ -432,9 +437,9 @@ start_dev_sessions() {
   prefix="$(tmux_env_prefix)"
   local force_db_sync="${FORCE_DB_SYNC:-true}"
   local jwt_secret="${JWT_SECRET:-unsafe-self-host-secret}"
-  local web_cmd="${prefix} cd ${(q)ROOT_DIR}/web; yarn run i18n:watch >> ${(q)LOG_DIR}/web-dev-i18n.log 2>&1 & i18n_pid=\$!; ./node_modules/.bin/webpack --mode development --color --config webpack.server.config.js --watch >> ${(q)LOG_DIR}/web-dev-webpack.log 2>&1 & webpack_pid=\$!; trap 'kill \$i18n_pid \$webpack_pid 2>/dev/null || true' EXIT INT TERM; NODE_ENV=development CHANNEL=development SERVER_PORT=${(q)WEB_PORT} FBG_BACKEND_TARGET=http://127.0.0.1:${(q)BACKEND_PORT} FBG_BGIO_TARGET=http://127.0.0.1:${(q)BGIO_PORT} BGIO_PRIVATE_SERVERS=http://127.0.0.1:${(q)BGIO_PORT} ./node_modules/.bin/nodemon --watch server/dist/server_web.js --delay 1 --exec 'node server/dist/server_web.js' >> ${(q)LOG_DIR}/web-dev.log 2>&1"
-  local bgio_cmd="${prefix} cd ${(q)ROOT_DIR}/web; BGIO_PORT=${(q)BGIO_PORT} BGIO_PUBLIC_SERVERS=${(q)PUBLIC_URL} BGIO_ALLOWED_ORIGINS=${(q)PUBLIC_URL} BGIO_PRIVATE_SERVERS=http://127.0.0.1:${(q)BGIO_PORT} exec yarn run bgio:dev >> ${(q)LOG_DIR}/bgio-dev.log 2>&1"
-  local backend_cmd="${prefix} cd ${(q)ROOT_DIR}/fbg-server; NODE_ENV=development FORCE_DB_SYNC=${(q)force_db_sync} JWT_SECRET=${(q)jwt_secret} BGIO_PRIVATE_SERVERS=http://127.0.0.1:${(q)BGIO_PORT} BGIO_PUBLIC_SERVERS=${(q)PUBLIC_URL} exec yarn run start:dev >> ${(q)LOG_DIR}/backend-dev.log 2>&1"
+  local web_cmd="${prefix} cd ${(q)ROOT_DIR}/web; pnpm run i18n:watch >> ${(q)LOG_DIR}/web-dev-i18n.log 2>&1 & i18n_pid=\$!; NODE_OPTIONS=--openssl-legacy-provider pnpm exec webpack --mode development --color --config webpack.server.config.js --watch >> ${(q)LOG_DIR}/web-dev-webpack.log 2>&1 & webpack_pid=\$!; trap 'kill \$i18n_pid \$webpack_pid 2>/dev/null || true' EXIT INT TERM; NODE_ENV=development CHANNEL=development SERVER_PORT=${(q)WEB_PORT} FBG_BACKEND_TARGET=http://127.0.0.1:${(q)BACKEND_PORT} FBG_BGIO_TARGET=http://127.0.0.1:${(q)BGIO_PORT} BGIO_PRIVATE_SERVERS=http://127.0.0.1:${(q)BGIO_PORT} pnpm exec nodemon --watch server/dist/server_web.js --delay 1 --exec 'node server/dist/server_web.js' >> ${(q)LOG_DIR}/web-dev.log 2>&1"
+  local bgio_cmd="${prefix} cd ${(q)ROOT_DIR}/web; BGIO_PORT=${(q)BGIO_PORT} BGIO_PUBLIC_SERVERS=${(q)PUBLIC_URL} BGIO_ALLOWED_ORIGINS=${(q)PUBLIC_URL} BGIO_PRIVATE_SERVERS=http://127.0.0.1:${(q)BGIO_PORT} exec pnpm run bgio:dev >> ${(q)LOG_DIR}/bgio-dev.log 2>&1"
+  local backend_cmd="${prefix} cd ${(q)ROOT_DIR}/fbg-server; NODE_ENV=development FORCE_DB_SYNC=${(q)force_db_sync} JWT_SECRET=${(q)jwt_secret} BGIO_PRIVATE_SERVERS=http://127.0.0.1:${(q)BGIO_PORT} BGIO_PUBLIC_SERVERS=${(q)PUBLIC_URL} exec pnpm run start:dev >> ${(q)LOG_DIR}/backend-dev.log 2>&1"
 
   tmuxnew "$DEV_WEB_SESSION" zsh -lc "$web_cmd"
   tmuxnew "$DEV_BGIO_SESSION" zsh -lc "$bgio_cmd"
@@ -458,6 +463,7 @@ configure_url() {
 setup_cmd() {
   parse_deploy_args "$@"
   ensure_node_shell
+  ensure_pnpm_shell
   configure_url "${SELECTED_PUBLIC_URL:-$DEFAULT_PUBLIC_URL}"
   load_config
   stop_all_sessions
@@ -472,6 +478,7 @@ setup_cmd() {
 redeploy_cmd() {
   parse_deploy_args "$@"
   ensure_node_shell
+  ensure_pnpm_shell
   configure_url "${SELECTED_PUBLIC_URL:-}"
   load_config
   install_dependencies
@@ -493,6 +500,7 @@ start_cmd() {
 
 dev_start_cmd() {
   ensure_node_shell
+  ensure_pnpm_shell
   configure_url "${1:-}"
   load_config
   write_caddy_block dev

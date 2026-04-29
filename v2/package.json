@@ -1,9 +1,13 @@
 {
   "private": true,
-  "workspaces": ["fbg-games", "fbg-web", "fbg-bgio"],
+  "workspaces": [
+    "fbg-games",
+    "fbg-web",
+    "fbg-bgio"
+  ],
   "scripts": {
-    "lint": "cd fbg-web && yarn run lint",
-    "test": "cd fbg-web && yarn run test"
+    "lint": "pnpm --dir fbg-web run lint",
+    "test": "pnpm --dir fbg-web run test"
   },
   "devDependencies": {
     "@types/node": "18.11.7",
@@ -12,5 +16,6 @@
     "@types/glob": "^8.0.0",
     "@types/js-yaml": "^4.0.5",
     "typescript": "4.8.4"
-  }
+  },
+  "packageManager": "pnpm@10.33.2"
 }

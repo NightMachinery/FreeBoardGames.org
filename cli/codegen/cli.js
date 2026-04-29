@@ -2,7 +2,7 @@ import shell from "shelljs";
 import { decodeCsv, printErr, checkEnvironment } from "../util.js";
 import { codegen } from "./codegen.js";
 
-const USAGE = "Usage: yarn run codegen game1,game2";
+const USAGE = "Usage: pnpm run codegen game1,game2";
 
 function start() {
   const argv = process.argv;

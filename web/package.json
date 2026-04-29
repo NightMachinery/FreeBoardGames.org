@@ -14,25 +14,25 @@
     "dev:internal:start": "start-server-and-test dev:web http://localhost:3000 bgio:dev",
     "dev:web": "run-s build:server:dev dev:runserver",
     "dev:runserver": "node server/dist/server_web.js",
-    "bgio:dev": "nodemon --config nodemon.bgio.json -e js,ts --exec yarn run bgio",
+    "bgio:dev": "nodemon --config nodemon.bgio.json -e js,ts --exec pnpm run bgio",
     "prod": "run-s build start",
-    "build:server": "webpack --mode production --color --progress --config webpack.server.config.js",
-    "build:server:dev": "webpack --mode development --color --progress --config webpack.server.config.js",
+    "build:server": "cross-env NODE_OPTIONS=--openssl-legacy-provider webpack --mode production --color --progress --config webpack.server.config.js",
+    "build:server:dev": "cross-env NODE_OPTIONS=--openssl-legacy-provider webpack --mode development --color --progress --config webpack.server.config.js",
     "bgio": "run-s build:server start:bgio",
-    "build": "cross-env BABEL_ENV=production NODE_ENV=production CHANNEL=production next build && yarn run build:storybook",
-    "build:storybook": "cross-env BABEL_ENV=production NODE_ENV=production NODE_PATH=src/ build-storybook -o public/static/docs",
+    "build": "cross-env BABEL_ENV=production NODE_ENV=production CHANNEL=production NODE_OPTIONS=--openssl-legacy-provider next build && pnpm run build:storybook",
+    "build:storybook": "cross-env BABEL_ENV=production NODE_ENV=production NODE_OPTIONS=--openssl-legacy-provider NODE_PATH=src/ build-storybook -o public/static/docs",
     "start:bgio": "node server/dist/server_bgio.js",
     "start": "run-s build:server start:server",
     "start:server": "cross-env CHANNEL=production NODE_ENV=production node server/dist/server_web.js",
-    "test:coveralls": "cat coverage/lcov.info | node node_modules/.bin/coveralls",
+    "test:coveralls": "cat coverage/lcov.info | coveralls",
     "mkdir:reports": "rimraf reports && mkdirp reports",
-    "precopy:reports": "yarn run mkdir:reports",
+    "precopy:reports": "pnpm run mkdir:reports",
     "copy:reports": "ncp coverage-unit/coverage-final.json reports/jest-unit.json && ncp coverage-e2e/coverage-final.json reports/jest-e2e.json",
-    "precombine:reports": "yarn run copy:reports && mkdirp .nyc_output",
+    "precombine:reports": "pnpm run copy:reports && mkdirp .nyc_output",
     "combine:reports": "nyc merge reports && move-cli coverage.json .nyc_output/out.json",
-    "prereport:combined": "yarn run combine:reports",
+    "prereport:combined": "pnpm run combine:reports",
     "report:combined": "nyc report --reporter lcov --report-dir coverage",
-    "storybook": "cross-env NODE_PATH=src/ NODE_OPTIONS='--max-old-space-size=4096' start-storybook -p 6006 -s ./public",
+    "storybook": "cross-env NODE_PATH=src/ NODE_OPTIONS='--openssl-legacy-provider --max-old-space-size=4096' start-storybook -p 6006 -s ./public",
     "prepare": "cd .. && husky install web/.husky",
     "i18n:copy": "cross-env TS_NODE_PROJECT=tsconfig.server.json ts-node server/config/i18n/sync/copyOnce.ts",
     "i18n:watch": "cross-env TS_NODE_PROJECT=tsconfig.server.json ts-node server/config/i18n/sync/watch.ts"
@@ -129,8 +129,7 @@
     "use-async-effect": "^2.2.5",
     "webpackbar": "^4.0.0",
     "winston": "^3.7.2",
-    "worker-loader": "^2.0.0",
-    "yarn": "^1.22.10"
+    "worker-loader": "^2.0.0"
   },
   "devDependencies": {
     "@apollo/react-testing": "^4.0.0",
@@ -221,10 +220,8 @@
     "webpack-cli": "^4.9.2",
     "webpack-node-externals": "^2.5.2"
   },
-  "resolutions": {
-    "graphql": "15.3.0"
-  },
   "nyc": {
     "report-dir": "coverage-e2e"
-  }
+  },
+  "packageManager": "pnpm@10.33.2"
 }

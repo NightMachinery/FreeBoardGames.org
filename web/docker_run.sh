@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ "$SERVER_TYPE" = "BGIO" ]; then
-  yarn run start:bgio
+  pnpm run start:bgio
 elif [ "$SERVER_TYPE" = "WEB" ]; then
-  NODE_ENV=production yarn run start:server
+  NODE_ENV=production pnpm run start:server
 fi
