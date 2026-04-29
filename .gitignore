@@ -25,3 +25,4 @@ Caddyfile
 dev.db
 fbg-server/dev.db
 tmp
+.self_host/
