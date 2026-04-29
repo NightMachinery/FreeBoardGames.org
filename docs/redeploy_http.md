@@ -66,6 +66,10 @@ cd /home/ubuntu/base/FreeBoardGames.org
 ./run_tmux_http.zsh start
 ```
 
+## GraphQL schema/codegen note
+
+The redeploy flow runs `yarn run codegen` before the production build. Apollo codegen reads the checked-in schema at `common/gql/schema.gql`, so that schema must include any GraphQL operations used by the web client. For example, the play-again flow calls the public mutation `publicNextRoom(matchId: String!): String!`; if the schema is stale and only lists `nextRoom`, redeploy fails during `apollo client:codegen` with `Cannot query field "publicNextRoom" on type "Mutation"`.
+
 ## Verify
 
 ```bash

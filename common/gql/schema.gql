@@ -78,6 +78,7 @@ type Mutation {
   shuffleUsers(roomId: String!): Boolean!
   updateRoom(room: UpdateRoomInput!): Boolean!
   nextRoom(matchId: String!): String!
+  publicNextRoom(matchId: String!): String!
   startMatch(roomId: String!, shuffleUsers: Boolean!, setupData: String!): String!
   sendMessage(message: SendMessageInput!): Boolean!
 }
