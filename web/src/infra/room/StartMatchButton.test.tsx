@@ -59,6 +59,46 @@ describe('Room Start Match Button', () => {
     expect(wrapper.find(Tooltip).first().prop('title')).toBe('Only foo can start.');
   });
 
+  it('should show enabled button for creator when joined players meet minPlayers even with empty seats', async () => {
+    const metadata: JoinRoom_joinRoom = {
+      __typename: 'Room' as const,
+      gameCode: 'secretcodes',
+      capacity: 6,
+      isPublic: false,
+      userId: 1,
+      matchId: null,
+      userMemberships: [
+        {
+          __typename: 'RoomMembership' as const,
+          isCreator: true,
+          position: 1,
+          user: { nickname: 'foo', id: 1, __typename: 'User' as const },
+        },
+        {
+          __typename: 'RoomMembership' as const,
+          isCreator: false,
+          position: 2,
+          user: { nickname: 'bar', id: 2, __typename: 'User' as const },
+        },
+        {
+          __typename: 'RoomMembership' as const,
+          isCreator: false,
+          position: 3,
+          user: { nickname: 'baz', id: 3, __typename: 'User' as const },
+        },
+        {
+          __typename: 'RoomMembership' as const,
+          isCreator: false,
+          position: 4,
+          user: { nickname: 'qux', id: 4, __typename: 'User' as const },
+        },
+      ],
+    };
+    const wrapper = mount(<StartMatchButton roomMetadata={metadata} userId={1} startMatch={() => {}} />);
+    expect(wrapper.find(Button).at(0).getDOMNode()).toBeEnabled();
+    expect(wrapper.find(Button).at(1).getDOMNode()).toBeEnabled();
+  });
+
   it('should show enabled button if creator and full', async () => {
     const metadata: JoinRoom_joinRoom = {
       __typename: 'Room' as const,

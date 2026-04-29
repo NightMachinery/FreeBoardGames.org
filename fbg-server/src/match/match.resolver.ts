@@ -28,6 +28,13 @@ export class MatchResolver {
   }
 
   @Mutation(() => String)
+  async publicNextRoom(
+    @Args({ name: 'matchId', type: () => String }) matchId: string,
+  ): Promise<string> {
+    return this.matchService.getNextRoom(matchId);
+  }
+
+  @Mutation(() => String)
   @UseGuards(GqlAuthGuard)
   async nextRoom(
     @CurrentUser() currentUser: User,
@@ -44,6 +51,11 @@ export class MatchResolver {
     @Args({ name: 'shuffleUsers', type: () => Boolean }) shuffleUsers: boolean,
     @Args({ name: 'setupData', type: () => String }) setupData: string,
   ): Promise<string> {
-    return this.matchService.startMatch(roomId, currentUser.id, shuffleUsers, setupData);
+    return this.matchService.startMatch(
+      roomId,
+      currentUser.id,
+      shuffleUsers,
+      setupData,
+    );
   }
 }

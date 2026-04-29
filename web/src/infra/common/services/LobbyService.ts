@@ -330,12 +330,12 @@ export class LobbyService {
     const result = await client.mutate<NextRoom, NextRoomVariables>({
       mutation: gql`
         mutation NextRoom($matchId: String!) {
-          nextRoom(matchId: $matchId)
+          publicNextRoom(matchId: $matchId)
         }
       `,
       variables: { matchId },
     });
-    return result.data.nextRoom;
+    return result.data.publicNextRoom;
   }
 
   public static async getLobby() {

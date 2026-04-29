@@ -8,7 +8,7 @@
 // ====================================================
 
 export interface NextRoom {
-  nextRoom: string;
+  publicNextRoom: string;
 }
 
 export interface NextRoomVariables {

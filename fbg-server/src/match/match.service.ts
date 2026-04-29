@@ -16,6 +16,7 @@ import { RoomEntity } from '../rooms/db/Room.entity';
 import { RoomMembershipEntity } from '../rooms/db/RoomMembership.entity';
 import shortid from 'shortid';
 import { inTransaction } from '../util/TypeOrmUtil';
+import { getMinPlayersForGame } from '../rooms/gameMetadata';
 
 @Injectable()
 export class MatchService {
@@ -57,17 +58,19 @@ export class MatchService {
   }
 
   /** Gets next room players should go if they want to play again. */
-  async getNextRoom(matchId: string, userId: number): Promise<string> {
+  async getNextRoom(matchId: string, userId?: number): Promise<string> {
     return inTransaction(this.connection, async (queryRunner) => {
       const entity = await this.getMatchEntity(matchId);
-      const membership = entity.playerMemberships.find(
-        (m) => m.user.id === userId,
-      );
-      if (!membership) {
-        throw new HttpException(
-          'You need to be a player in order to play again',
-          HttpStatus.BAD_REQUEST,
+      if (userId !== undefined) {
+        const membership = entity.playerMemberships.find(
+          (m) => m.user.id === userId,
         );
+        if (!membership) {
+          throw new HttpException(
+            'You need to be a player in order to play again',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
       }
       if (entity.nextRoom) {
         return entity.nextRoom.id;
@@ -97,7 +100,7 @@ export class MatchService {
     roomId: string,
     userId: number,
     shuffleUsers?: boolean,
-    setupData?: string
+    setupData?: string,
   ): Promise<string> {
     return await inTransaction(this.connection, async (queryRunner) => {
       const room = await this.roomsService.getRoomEntity(roomId);
@@ -110,8 +113,14 @@ export class MatchService {
           HttpStatus.BAD_REQUEST,
         );
       }
-      if (room.capacity !== room.userMemberships.length) {
-        throw new HttpException('Room is not full yet', HttpStatus.BAD_REQUEST);
+      const joinedPlayers = room.userMemberships.length;
+      const minPlayers = getMinPlayersForGame(room.gameCode, room.capacity);
+      if (joinedPlayers < minPlayers) {
+        throw new HttpException('Not enough players', HttpStatus.BAD_REQUEST);
+      }
+      if (room.capacity !== joinedPlayers) {
+        room.capacity = joinedPlayers;
+        await queryRunner.manager.save(room);
       }
       return await this.createMatch(queryRunner, room, shuffleUsers, setupData);
     });
@@ -121,7 +130,7 @@ export class MatchService {
     queryRunner: QueryRunner,
     room: RoomEntity,
     shuffleUsers?: boolean,
-    setupData?: string
+    setupData?: string,
   ): Promise<string> {
     const memberships = room.userMemberships.slice();
     if (shuffleUsers) {
@@ -129,7 +138,9 @@ export class MatchService {
     } else {
       memberships.sort((m1, m2) => m1.position - m2.position);
     }
-    const creatorPlayerID = memberships.findIndex((membership) => membership.isCreator);
+    const creatorPlayerID = memberships.findIndex(
+      (membership) => membership.isCreator,
+    );
     const mergedSetupData = mergeSetupData(setupData, {
       hostPlayerID: creatorPlayerID >= 0 ? `${creatorPlayerID}` : '0',
     });
@@ -174,7 +185,7 @@ export class MatchService {
     const response = await this.httpService
       .post(`${bgioServerUrl}/games/${room.gameCode}/create`, {
         numPlayers: room.capacity,
-        setupData
+        setupData,
       })
       .toPromise();
     return response.data.matchID;
@@ -219,7 +230,10 @@ function shuffleArray(array: any[]) {
   }
 }
 
-function mergeSetupData(rawSetupData: string | undefined, extraSetupData: Record<string, unknown>): string | undefined {
+function mergeSetupData(
+  rawSetupData: string | undefined,
+  extraSetupData: Record<string, unknown>,
+): string | undefined {
   const parsedSetupData = rawSetupData ? JSON.parse(rawSetupData) : {};
   return JSON.stringify({ ...parsedSetupData, ...extraSetupData });
 }

@@ -112,6 +112,8 @@ const GameConfig: Game<IG> = {
           move: pass,
           client: false,
         },
+        toggleSpymaster,
+        toggleRepresentative,
       },
     },
   },

@@ -105,9 +105,9 @@ describe('MatchService', () => {
 
     expect(match).toEqual({
       gameCode: 'secretcodes',
-        bgioServerUrl: 'fooExternalUrl',
-        bgioMatchId: 'fooMatchId',
-        playerMemberships: [
+      bgioServerUrl: 'fooExternalUrl',
+      bgioMatchId: 'fooMatchId',
+      playerMemberships: [
         { isCreator: false, user: { id: aliceId, nickname: 'spectatoralice' } },
       ],
     });
@@ -160,7 +160,9 @@ describe('MatchService', () => {
       .mockReturnValueOnce(
         Promise.resolve({ data: { playerCredentials: '2ndSecret' } }),
       )
-      .mockReturnValueOnce(Promise.resolve({ data: { matchID: 'bgioGameId-2' } }))
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { matchID: 'bgioGameId-2' } }),
+      )
       .mockReturnValueOnce(
         Promise.resolve({ data: { playerCredentials: 'creatorSecret' } }),
       );
@@ -218,6 +220,95 @@ describe('MatchService', () => {
     const result = service.getNextRoom(matchId, joeId);
 
     await expect(result).rejects.toThrow();
+  });
+
+  it('should start match with unfilled seats when joined players meet the game minimum', async () => {
+    const promiseMock = jest
+      .fn()
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { matchID: 'bgioGameId-unfilled' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '1stSecret' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '2ndSecret' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '3rdSecret' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '4thSecret' } }),
+      );
+    jest
+      .spyOn(httpService, 'post')
+      .mockReturnValue({ toPromise: promiseMock } as any);
+
+    const bobId = await usersService.newUser({ nickname: 'bobunfilled' });
+    const room = await roomsService.newRoom(
+      {
+        capacity: 6,
+        gameCode: 'secretcodes',
+        isPublic: false,
+      },
+      bobId,
+    );
+    for (const nickname of ['aliceunfilled', 'carolunfilled', 'daveunfilled']) {
+      const userId = await usersService.newUser({ nickname });
+      await roomsService.joinRoom(userId, room.id);
+    }
+
+    const matchId = await service.startMatch(room.id, bobId);
+    const match = await service.getMatchEntity(matchId);
+    const updatedRoom = await roomsService.getRoomEntity(room.id);
+
+    expect(updatedRoom.capacity).toEqual(4);
+    expect(match.playerMemberships).toHaveLength(4);
+    expect(httpService.post).toHaveBeenCalledWith(
+      expect.stringContaining('/games/secretcodes/create'),
+      {
+        numPlayers: 4,
+        setupData: { hostPlayerID: '0' },
+      },
+    );
+  });
+
+  it('should let non-player visitors create or fetch the play-again room', async () => {
+    const promiseMock = jest
+      .fn()
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { matchID: 'bgioGameId-public-next' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '1stSecret' } }),
+      )
+      .mockReturnValueOnce(
+        Promise.resolve({ data: { playerCredentials: '2ndSecret' } }),
+      );
+    jest
+      .spyOn(httpService, 'post')
+      .mockReturnValue({ toPromise: promiseMock } as any);
+
+    const bobId = await usersService.newUser({ nickname: 'bobpublicnext' });
+    const room = await roomsService.newRoom(
+      {
+        capacity: 2,
+        gameCode: 'checkers',
+        isPublic: false,
+      },
+      bobId,
+    );
+    const aliceId = await usersService.newUser({ nickname: 'alicepublicnext' });
+    await roomsService.joinRoom(aliceId, room.id);
+    const matchId = await service.startMatch(room.id, bobId);
+
+    const nextRoomId = await service.getNextRoom(matchId);
+    const sameNextRoomId = await service.getNextRoom(matchId);
+    const nextRoom = await roomsService.getRoomEntity(nextRoomId);
+
+    expect(sameNextRoomId).toEqual(nextRoomId);
+    expect(nextRoom.userMemberships[0].user.id).toEqual(bobId);
+    expect(nextRoom.userMemberships[0].isCreator).toEqual(true);
   });
 
   it('should fail to start match if room is not full', async () => {

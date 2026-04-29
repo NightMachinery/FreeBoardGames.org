@@ -416,3 +416,46 @@ button.playActionBtn {
   color: black;
   text-align: center;
 }
+
+.cardWord {
+  display: block;
+  width: 100%;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  font-size: clamp(0.55rem, calc((100vw - 3.6rem) / var(--board-columns, 5) / 7), 1.25rem);
+}
+
+.roleControls {
+  margin: 1rem auto;
+  padding: 1rem;
+  max-width: 920px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+}
+
+.roleControlTeams {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.roleControlTeam ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roleControlPlayer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.roleControlName {
+  flex: 1 1 100%;
+  font-weight: 600;
+}

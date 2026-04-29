@@ -10,6 +10,10 @@ declare module '*.md' {
   const contentMd: string;
   export default contentMd;
 }
+declare module '*.txt' {
+  const contentTxt: string;
+  export default contentTxt;
+}
 declare module '*.css' {
   const _defaultCss: any;
   export default _defaultCss;

@@ -466,10 +466,23 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     );
   };
 
+  _getWordCardFontSize = (word: string): string => {
+    const longestWordPart = word.split(/\s+/).reduce((longest, part) => Math.max(longest, part.length), 0);
+    const totalLength = word.length;
+    const cardsPerRow = this._getCardsPerRow();
+    const sizeByCard = Math.max(0.55, Math.min(1.25, 6 / cardsPerRow));
+    const sizeByWord = Math.max(0.55, Math.min(sizeByCard, 14 / Math.max(longestWordPart, totalLength / 2.2)));
+    return `${sizeByWord.toFixed(2)}rem`;
+  };
+
   _renderCardContent = (cardIndex: number) => {
     const card = this.props.G.cards[cardIndex];
     if (!this.props.G.picturesMode) {
-      return card.word;
+      return (
+        <span className={css.cardWord} style={{ fontSize: this._getWordCardFontSize(card.word) }}>
+          {card.word}
+        </span>
+      );
     }
 
     const imageId = this.state.pictureImageIds[cardIndex];
@@ -673,6 +686,71 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
     );
   };
 
+  _togglePlayerSpymaster = (playerID: string) => {
+    if (!this.props.isHost || this.props.isGameOver) return;
+    this.props.moves.toggleSpymaster(playerID);
+  };
+
+  _togglePlayerRepresentative = (playerID: string) => {
+    if (!this.props.isHost || this.props.isGameOver) return;
+    this.props.moves.toggleRepresentative(playerID);
+  };
+
+  _renderHostRoleControls = () => {
+    if (!this.props.isHost || this.props.isGameOver || this.props.gameArgs.mode !== GameMode.OnlineFriend) {
+      return null;
+    }
+
+    const teams = this.props.G.teams.map((team) => {
+      const title = team.color === TeamColor.Red ? this.props.translate('red_team') : this.props.translate('blue_team');
+      return (
+        <div className={css.roleControlTeam} key={team.color}>
+          <h4>{title}</h4>
+          <ul>
+            {team.playersID.map((playerID) => {
+              const player = this.props.gameArgs.players[playerID];
+              if (!player) return null;
+              const isSpymaster = isPlayerSpymaster(this.props.G, playerID);
+              const isRepresentative = isPlayerRepresentative(this.props.G, playerID);
+              return (
+                <li className={css.roleControlPlayer} key={playerID}>
+                  <span className={css.roleControlName}>
+                    {isSpymaster ? this.props.translate('s') : null}
+                    {isRepresentative ? this.props.translate('r') : null}
+                    {player.name}
+                  </span>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => this._togglePlayerSpymaster(playerID)}
+                    data-testid={`midgame-toggle-spymaster-${playerID}`}
+                  >
+                    {this.props.translate(isSpymaster ? 'remove_spymaster' : 'make_spymaster')}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => this._togglePlayerRepresentative(playerID)}
+                    data-testid={`midgame-toggle-representative-${playerID}`}
+                  >
+                    {this.props.translate(isRepresentative ? 'remove_representative' : 'make_representative')}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      );
+    });
+
+    return (
+      <div className={css.roleControls} data-testid="midgame-role-controls">
+        <h3>{this.props.translate('host_role_controls')}</h3>
+        <div className={css.roleControlTeams}>{teams}</div>
+      </div>
+    );
+  };
+
   _renderPlayerBadges = () => {
     const colors = this.props.gameArgs.players
       .map((player) => player.playerID.toString())
@@ -780,6 +858,7 @@ export class PlayBoardInternal extends React.Component<IPlayBoardInnerProps & IP
         {this._renderHeader()}
         {this._renderPictureSection()}
         {this._renderActionButtons()}
+        {this._renderHostRoleControls()}
         {this._renderPlayerBadges()}
         {this._renderConfirmDialog()}
       </div>

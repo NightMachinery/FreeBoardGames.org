@@ -6,6 +6,7 @@ import ButtonGroup from '@material-ui/core/ButtonGroup';
 import Tooltip from '@material-ui/core/Tooltip';
 import { WithTranslation, withTranslation } from 'infra/i18n';
 import { compose } from 'recompose';
+import { getGameDefinition } from 'infra/game';
 
 export interface IStartMatchButtonInnerProps extends WithTranslation {}
 
@@ -23,7 +24,10 @@ export const StartMatchButton = enhance(
       const creator = this.props.roomMetadata.userMemberships.find((membership) => membership.isCreator);
       let disabled = false;
       let explanation;
-      if (this.props.roomMetadata.capacity > this.props.roomMetadata.userMemberships.length) {
+      const occupancy = this.props.roomMetadata.userMemberships.length;
+      const minPlayers =
+        getGameDefinition(this.props.roomMetadata.gameCode)?.minPlayers ?? this.props.roomMetadata.capacity;
+      if (occupancy < minPlayers) {
         disabled = true;
         explanation = this.props.t('not_enough_players');
       } else if (creator.user.id !== this.props.userId) {

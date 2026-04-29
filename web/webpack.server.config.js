@@ -90,7 +90,7 @@ var config = {
         ],
       },
       {
-        test: /\.md$/,
+        test: /\.(md|txt)$/,
         use: [
           {
             loader: 'raw-loader',
