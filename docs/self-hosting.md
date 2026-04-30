@@ -201,3 +201,5 @@ The old `prepare_once.zsh`, `run.zsh`, and `run_tmux_http.zsh` entrypoints are c
 ### Apollo React package compatibility for Node LTS self-hosting
 
 The legacy Next 9 / React 16 app must use the React-16-era Apollo React wrapper packages for component subscriptions. Importing `Subscription` from `@apollo/client/react/components` pulled in Apollo Client's newer `rehackt` compatibility layer and produced React SSR invariant 321 on Node LTS once stale old servers were no longer masking the rebuilt app. Keep `@apollo/react-components` / `@apollo/react-hooks` pinned to 3.1.5 for the legacy web app, while `@apollo/client` remains pinned separately for code that needs the modern client/link entry points.
+
+The custom Next document intentionally renders a literal `<html>` element instead of importing `Html` from `next/document` for the legacy Next 9 self-host build. Under the pnpm/Node LTS dependency layout, Next's `Html` component can resolve a bundled React copy during server-side document rendering and trip React invariant 321. The literal element avoids that duplicate-React hook path.

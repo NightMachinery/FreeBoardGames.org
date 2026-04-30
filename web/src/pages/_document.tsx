@@ -1,7 +1,7 @@
 // https://github.com/mui-org/material-ui/blob/4657c5ed5a47b3f7bd1b7267fb85a4863c9180c6/docs/pages/_document.js
 
 import React from 'react';
-import Document, { Html, Head, Main, NextScript } from 'next/document';
+import Document, { Head, Main, NextScript } from 'next/document';
 import { ServerStyleSheets } from '@material-ui/core/styles';
 
 let prefixer;
@@ -21,7 +21,7 @@ if (process.env.NODE_ENV === 'production') {
 export default class MyDocument extends Document {
   render() {
     return (
-      <Html>
+      <html>
         <Head>
           <link rel="shortcut icon" type="image/x-icon" href="/static/icons/favicon.ico" />
           <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png" />
@@ -35,7 +35,7 @@ export default class MyDocument extends Document {
           <Main />
           <NextScript />
         </body>
-      </Html>
+      </html>
     );
   }
 }
