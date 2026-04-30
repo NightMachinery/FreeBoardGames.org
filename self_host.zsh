@@ -24,6 +24,8 @@ readonly DEV_BGIO_SESSION='fbg-selfhost-bgio-dev'
 readonly DEV_BACKEND_SESSION='fbg-selfhost-backend-dev'
 readonly CADDY_BEGIN='# BEGIN freeboardgames self-host'
 readonly CADDY_END='# END freeboardgames self-host'
+readonly LEGACY_HTTP_CADDY_BEGIN='# BEGIN freeboardgames http self-host'
+readonly LEGACY_HTTP_CADDY_END='# END freeboardgames http self-host'
 readonly DEFAULT_DEPLOY_GAMES=(secretcodes)
 
 PUBLIC_URL=''
@@ -31,12 +33,15 @@ SITE_ADDRESS=''
 PUBLIC_HOSTPORT=''
 SELECTED_PUBLIC_URL=''
 SELECTED_GAMES=()
+BUILD_STORYBOOK=false
 
 usage() {
   cat <<USAGE
 Usage:
   ./self_host.zsh setup [public_url] [game ...]
   ./self_host.zsh redeploy [public_url] [game ...]
+  ./self_host.zsh setup --storybook [public_url] [game ...]
+  ./self_host.zsh redeploy --storybook [public_url] [game ...]
   ./self_host.zsh start [public_url]
   ./self_host.zsh dev-start [public_url]
   ./self_host.zsh stop
@@ -46,6 +51,7 @@ Default setup/redeploy games: ${DEFAULT_DEPLOY_GAMES[*]}
 
 public_url may be a full http(s) origin or a host-only value. Paths, query strings, and fragments are not supported.
 setup/redeploy game arguments are web/src/games directory names. The alias 'secretnames' maps to 'secretcodes'.
+setup/redeploy skip Storybook docs by default. Pass --storybook to rebuild web/public/static/docs too.
 USAGE
 }
 
@@ -233,7 +239,7 @@ write_caddy_block() {
   local block_file="$STATE_DIR/Caddyfile.block"
   local candidate_file="$STATE_DIR/Caddyfile.candidate"
   caddy_block "$mode" > "$block_file"
-  python3 - "$CADDYFILE" "$block_file" "$candidate_file" "$CADDY_BEGIN" "$CADDY_END" <<'PY'
+  python3 - "$CADDYFILE" "$block_file" "$candidate_file" "$CADDY_BEGIN" "$CADDY_END" "$LEGACY_HTTP_CADDY_BEGIN" "$LEGACY_HTTP_CADDY_END" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -242,9 +248,19 @@ block = Path(sys.argv[2]).read_text().rstrip() + '\n'
 candidate = Path(sys.argv[3])
 begin = sys.argv[4]
 end = sys.argv[5]
+legacy_begin = sys.argv[6]
+legacy_end = sys.argv[7]
 text = caddyfile.read_text() if caddyfile.exists() else ''
 managed = f'{begin}\n{block}{end}\n'
-pattern = re.compile(re.escape(begin) + r'.*?' + re.escape(end) + r'\n?', re.S)
+legacy_pattern = re.compile(
+    r'^' + re.escape(legacy_begin) + r'$.*?^' + re.escape(legacy_end) + r'$\n?',
+    re.S | re.M,
+)
+text = legacy_pattern.sub('', text)
+pattern = re.compile(
+    r'^' + re.escape(begin) + r'$.*?^' + re.escape(end) + r'$\n?',
+    re.S | re.M,
+)
 if pattern.search(text):
     text = pattern.sub(managed, text)
 else:
@@ -350,10 +366,16 @@ is_url_like() {
 parse_deploy_args() {
   SELECTED_PUBLIC_URL=''
   SELECTED_GAMES=()
+  BUILD_STORYBOOK=false
 
   local total_args=$#
   local arg raw_game game
   for arg in "$@"; do
+    if [[ "$arg" == '--storybook' ]]; then
+      BUILD_STORYBOOK=true
+      continue
+    fi
+
     if [[ "$arg" == *,* ]] && ! is_url_like "$arg"; then
       for raw_game in ${(s:,:)arg}; do
         game="$(canonical_game_name "$raw_game")"
@@ -384,14 +406,23 @@ build_all() {
   local games_label="${(j:, :)games}"
   local games_index="$ROOT_DIR/web/src/games/index.ts"
   local games_index_backup="$STATE_DIR/games.index.ts.before-selfhost.$$"
+  local build_command='pnpm run build:selfhost'
+  if [[ "$BUILD_STORYBOOK" == 'true' ]]; then
+    build_command='pnpm run build'
+  fi
 
   ensure_dirs
   note "Generating code and building production artifacts for games: $games_label"
+  if [[ "$BUILD_STORYBOOK" == 'true' ]]; then
+    note 'Storybook docs build requested; web/public/static/docs will be regenerated'
+  else
+    note 'Skipping Storybook docs build; pass --storybook to regenerate web/public/static/docs'
+  fi
   cp "$games_index" "$games_index_backup"
   {
     run_in_node_shell "pnpm run codegen ${(q)games_csv}"
     run_in_node_shell 'pnpm --dir web run i18n:copy'
-    run_in_node_shell 'pnpm run build'
+    run_in_node_shell "$build_command"
     run_in_node_shell 'pnpm --dir fbg-server run build'
   } always {
     cp "$games_index_backup" "$games_index"

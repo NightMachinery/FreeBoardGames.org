@@ -35,11 +35,10 @@
     "storybook": "cross-env NODE_PATH=src/ NODE_OPTIONS='--openssl-legacy-provider --max-old-space-size=4096' start-storybook -p 6006 -s ./public",
     "prepare": "cd .. && husky install web/.husky",
     "i18n:copy": "cross-env TS_NODE_PROJECT=tsconfig.server.json ts-node server/config/i18n/sync/copyOnce.ts",
-    "i18n:watch": "cross-env TS_NODE_PROJECT=tsconfig.server.json ts-node server/config/i18n/sync/watch.ts"
+    "i18n:watch": "cross-env TS_NODE_PROJECT=tsconfig.server.json ts-node server/config/i18n/sync/watch.ts",
+    "build:next": "cross-env BABEL_ENV=production NODE_ENV=production CHANNEL=production NODE_OPTIONS=--openssl-legacy-provider next build"
   },
   "dependencies": {
-    "@apollo/react-components": "^4.0.0",
-    "@apollo/react-hooks": "^4.0.0",
     "@babel/plugin-transform-parameters": "^7.16.7",
     "@babel/plugin-transform-react-jsx": "^7.12.1",
     "@babel/plugin-transform-react-jsx-development": "^7.12.1",
@@ -110,7 +109,7 @@
     "react-dom": "16.14.0",
     "react-draggable": "^4.4.5",
     "react-is": "^16.8.0",
-    "react-lite-youtube-embed": "^2.2.1",
+    "react-lite-youtube-embed": "2.2.1",
     "react-markdown": "^4.3.1",
     "react-only-html-props": "^1.0.1",
     "react-redux": "^8.0.1",
@@ -129,10 +128,13 @@
     "use-async-effect": "^2.2.5",
     "webpackbar": "^4.0.0",
     "winston": "^3.7.2",
-    "worker-loader": "^2.0.0"
+    "worker-loader": "^2.0.0",
+    "@apollo/client": "3.14.1",
+    "@babel/runtime": "^7.29.2",
+    "@koa/cors": "^3.4.3",
+    "dotenv": "^16.4.7"
   },
   "devDependencies": {
-    "@apollo/react-testing": "^4.0.0",
     "@babel/core": "^7.17.9",
     "@babel/plugin-proposal-class-properties": "^7.14.5",
     "@storybook/addon-actions": "^6.4.20",
@@ -219,7 +221,10 @@
     "webp-loader": "^0.6.0",
     "webpack": "^4.44.2",
     "webpack-cli": "^4.9.2",
-    "webpack-node-externals": "^2.5.2"
+    "webpack-node-externals": "^2.5.2",
+    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
+    "style-loader": "2.0.0",
+    "css-loader": "5.2.7"
   },
   "nyc": {
     "report-dir": "coverage-e2e"

@@ -37,4 +37,4 @@ const GameLayoutInternal: VFC<IGameLayoutProps> = (props) => {
   );
 };
 
-export const GameLayout = enhance(GameLayoutInternal);
+export const GameLayout: React.ComponentType<IGameLayoutProps> = enhance(GameLayoutInternal);

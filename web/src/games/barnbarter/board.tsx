@@ -77,8 +77,6 @@ export class Board extends React.Component<IBoardProps, IBoardState> {
           clickPay={this._chosePay}
           clickGoing={this.props.moves.moveGoing}
         ></BControl>
-
-        {this.state}
       </GameLayout>
     );
   }
