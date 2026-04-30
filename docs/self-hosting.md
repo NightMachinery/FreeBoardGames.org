@@ -161,6 +161,8 @@ Useful defaults:
 
 The backend defaults to development mode for single-host deployments so Redis is not required. To use Redis-backed production backend behavior, edit `.self_host/config.env` after `setup` and set `BACKEND_NODE_ENV=production`, then provide `FBG_REDIS_HOST`, `FBG_REDIS_PORT`, and `FBG_REDIS_PASSWORD` in the shell that starts the app.
 
+The backend uses TypeORM with SQLite by default when `POSTGRES_URL` is unset. `sqlite3` needs a native binding for the active Node ABI, so the workspace allows the `sqlite3` install script and `self_host.zsh` verifies the binding after install, rebuilding it if needed. If `fbg-selfhost-backend` dies with `SQLite package has not been found installed` or `Could not locate the bindings file`, rerun `./self_host.zsh redeploy` so the binding check runs under the self-host Node version.
+
 ## Logs and troubleshooting
 
 Logs are appended under:
@@ -205,3 +207,7 @@ The legacy Next 9 / React 16 app must use the React-16-era Apollo React wrapper 
 The custom Next document intentionally renders a literal `<html>` element instead of importing `Html` from `next/document` for the legacy Next 9 self-host build. Under the pnpm/Node LTS dependency layout, Next's `Html` component can resolve a bundled React copy during server-side document rendering and trip React invariant 321. The literal element avoids that duplicate-React hook path.
 
 The custom document also renders the `#__next` container directly instead of importing `Main` from `next/document`, for the same duplicate-React hook reason.
+
+### NestJS backend package compatibility
+
+Keep the core NestJS packages in `fbg-server` on one major version. A mixed install with `@nestjs/core@9` and `@nestjs/common` / `@nestjs/platform-express@8` starts scanning modules and then crashes with `Cannot read properties of undefined (reading '__guards__')`. The self-hosted backend currently pins `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, and `@nestjs/testing` to `8.4.7`, which also keeps the legacy `HttpModule` / `HttpService` imports working without migrating to `@nestjs/axios`.

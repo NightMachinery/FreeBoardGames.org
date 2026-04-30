@@ -7,3 +7,6 @@ packages:
   - v2/fbg-bgio
   - v2/fbg-games
   - v2/fbg-web
+
+onlyBuiltDependencies:
+  - sqlite3

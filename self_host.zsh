@@ -341,6 +341,8 @@ ensure_build_artifacts() {
 install_dependencies() {
   note 'Installing dependencies with frozen pnpm lockfile'
   run_in_node_shell 'pnpm install --frozen-lockfile --prefer-offline'
+  note 'Ensuring sqlite3 native bindings for the backend'
+  run_in_node_shell 'node -e "require(require.resolve(\"sqlite3\", { paths: [\"./fbg-server\"] }))" >/dev/null 2>&1 || { sqlite_pkg="$(node -p "require(\"path\").dirname(require.resolve(\"sqlite3/package.json\", { paths: [\"./fbg-server\"] }))")"; cd "$sqlite_pkg"; npm run install; cd "$OLDPWD"; node -e "require(require.resolve(\"sqlite3\", { paths: [\"./fbg-server\"] }))"; }'
 }
 
 canonical_game_name() {
