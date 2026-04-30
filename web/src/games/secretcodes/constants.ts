@@ -11,33 +11,18 @@ export function parseWordpackText(text: string): string[] {
 }
 
 function labelFromFilename(filename: string): string {
-  return filename
-    .replace(/^\.\//, '')
-    .replace(/\.txt$/i, '')
-    .split(/[-_]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function labelFromText(filename: string, text: string): string {
-  const labelLine = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find((line) => line.startsWith('#') && line.slice(1).trim().length > 0);
-
-  return labelLine ? labelLine.slice(1).trim() : labelFromFilename(filename);
+  return filename.replace(/^\.\//, '');
 }
 
 const WORDPACK_LABEL_ORDER = [
-  'English',
-  'English - Alternative',
-  'Dutch',
-  'Czech',
-  'German',
-  'Persian_1',
-  'Harry_Potter_1',
-  'Harry_Potter_1_fa',
+  'english.txt',
+  'english-alternative.txt',
+  'dutch.txt',
+  'czech.txt',
+  'german.txt',
+  'persian-1.txt',
+  'harry-potter-1.txt',
+  'harry-potter-1-fa.txt',
 ];
 
 function compareWordpacks(a: PredefinedWords, b: PredefinedWords): number {
@@ -64,7 +49,7 @@ function getWebpackWordpacks(): PredefinedWords[] | null {
     .map((filename: string) => {
       const text = context(filename).default || context(filename);
       return {
-        label: labelFromText(filename, text),
+        label: labelFromFilename(filename),
         words: parseWordpackText(text),
       };
     })
@@ -83,7 +68,7 @@ function getNodeWordpacks(): PredefinedWords[] {
       .map((filename) => {
         const text = fs.readFileSync(path.join(wordpacksDir, filename), 'utf8');
         return {
-          label: labelFromText(filename, text),
+          label: labelFromFilename(filename),
           words: parseWordpackText(text),
         };
       })
