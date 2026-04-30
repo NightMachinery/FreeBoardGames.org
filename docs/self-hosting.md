@@ -204,4 +204,4 @@ The legacy Next 9 / React 16 app must use the React-16-era Apollo React wrapper 
 
 The custom Next document intentionally renders a literal `<html>` element instead of importing `Html` from `next/document` for the legacy Next 9 self-host build. Under the pnpm/Node LTS dependency layout, Next's `Html` component can resolve a bundled React copy during server-side document rendering and trip React invariant 321. The literal element avoids that duplicate-React hook path.
 
-The self-host Next webpack config aliases `react` and `react-dom` to the web app's top-level packages so Next's server-rendered document components do not bundle a second React copy under pnpm.
+The custom document also renders the `#__next` container directly instead of importing `Main` from `next/document`, for the same duplicate-React hook reason.

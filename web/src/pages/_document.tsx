@@ -1,7 +1,7 @@
 // https://github.com/mui-org/material-ui/blob/4657c5ed5a47b3f7bd1b7267fb85a4863c9180c6/docs/pages/_document.js
 
 import React from 'react';
-import Document, { Head, Main, NextScript } from 'next/document';
+import Document, { Head, NextScript } from 'next/document';
 import { ServerStyleSheets } from '@material-ui/core/styles';
 
 let prefixer;
@@ -32,7 +32,7 @@ export default class MyDocument extends Document {
           <link rel="shortcut icon" href="/static/icons/favicon.ico" />
         </Head>
         <body style={{ margin: 0 }}>
-          <Main />
+          <div id="__next" dangerouslySetInnerHTML={{ __html: (this.props as any).html }} />
           <NextScript />
         </body>
       </html>
