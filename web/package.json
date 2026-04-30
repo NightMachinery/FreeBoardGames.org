@@ -132,7 +132,8 @@
     "@apollo/client": "3.14.1",
     "@babel/runtime": "^7.29.2",
     "@koa/cors": "^3.4.3",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "@apollo/react-hooks": "^4.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.17.9",

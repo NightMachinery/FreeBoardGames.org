@@ -19,6 +19,9 @@ readonly FBG_IMAGES_CACHE_DIR_DEFAULT="${DEFAULT_FBG_IMAGES_CACHE_DIR:-$HOME/.ca
 readonly PROD_WEB_SESSION='fbg-selfhost-web'
 readonly PROD_BGIO_SESSION='fbg-selfhost-bgio'
 readonly PROD_BACKEND_SESSION='fbg-selfhost-backend'
+readonly LEGACY_HTTP_WEB_SESSION='fbg-http-web'
+readonly LEGACY_HTTP_BGIO_SESSION='fbg-http-bgio'
+readonly LEGACY_HTTP_BACKEND_SESSION='fbg-http-backend'
 readonly DEV_WEB_SESSION='fbg-selfhost-web-dev'
 readonly DEV_BGIO_SESSION='fbg-selfhost-bgio-dev'
 readonly DEV_BACKEND_SESSION='fbg-selfhost-backend-dev'
@@ -302,6 +305,9 @@ stop_all_sessions() {
   stop_tmux_session "$PROD_WEB_SESSION"
   stop_tmux_session "$PROD_BGIO_SESSION"
   stop_tmux_session "$PROD_BACKEND_SESSION"
+  stop_tmux_session "$LEGACY_HTTP_WEB_SESSION"
+  stop_tmux_session "$LEGACY_HTTP_BGIO_SESSION"
+  stop_tmux_session "$LEGACY_HTTP_BACKEND_SESSION"
   stop_tmux_session "$DEV_WEB_SESSION"
   stop_tmux_session "$DEV_BGIO_SESSION"
   stop_tmux_session "$DEV_BACKEND_SESSION"

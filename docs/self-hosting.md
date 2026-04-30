@@ -44,6 +44,8 @@ If `web build:server` reports missing modules for Babel helpers, CORS, or dotenv
 
 If redeploy fails while validating Caddy with `ambiguous site definition`, remove stale FreeBoardGames blocks or rerun with the current script. The script replaces the canonical `# BEGIN freeboardgames self-host` block and also removes the old `# BEGIN freeboardgames http self-host` block so the same host is not defined twice.
 
+If the web UI still looks stale after a successful redeploy, check for old `fbg-http-*` tmux sessions. The current script stops those legacy sessions before starting `fbg-selfhost-*` so old Node processes cannot keep serving port `3000`, `8001`, or `3001`.
+
 ## What runs
 
 Public traffic is handled by Caddy from `~/Caddyfile`.

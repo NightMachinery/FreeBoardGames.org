@@ -4,7 +4,7 @@ import { ApolloClient, InMemoryCache, split } from '@apollo/client';
 import { createHttpLink } from '@apollo/client/link/http';
 import { WebSocketLink } from '@apollo/client/link/ws';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { ApolloProvider } from '@apollo/client';
+import { ApolloProvider } from '@apollo/react-hooks';
 import * as Sentry from '@sentry/browser';
 import { ThemeProvider } from 'infra/common';
 import { SelfXSSWarning } from 'infra/common/components/base/SelfXSSWarning';
