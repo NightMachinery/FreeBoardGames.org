@@ -49,8 +49,7 @@
     },
     "overrides": {
       "@types/recompose>@types/react": "17.0.44",
-      "@types/react": "17.0.44",
-      "@apollo/react-hooks>@apollo/client": "3.14.1"
+      "@types/react": "17.0.44"
     }
   }
 }

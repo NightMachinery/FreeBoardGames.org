@@ -1,6 +1,6 @@
 import React from 'react';
 import { gql } from 'apollo-boost';
-import { Subscription } from '@apollo/client/react/components';
+import { Subscription } from '@apollo/react-components';
 import Message from './internal/Message';
 import ChatInput from './internal/ChatInput';
 import ChatMessageHistory from './internal/ChatMessageHistory';

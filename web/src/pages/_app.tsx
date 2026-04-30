@@ -91,7 +91,7 @@ class DefaultApp extends App {
         </Head>
         <ThemeProvider>
           <SelfXSSWarning />
-          <ApolloProvider client={client}>
+          <ApolloProvider client={client as any}>
             <GameProvider {...pageProps}>
               <Component {...pageProps} />
             </GameProvider>
