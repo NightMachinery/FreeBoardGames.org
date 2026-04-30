@@ -1,13 +1,11 @@
-const withPlugins = require("next-compose-plugins");
-const withTM = require("next-transpile-modules")(["fbg-games"]);
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   trailingSlash: true,
+  transpilePackages: ["fbg-games"],
   env: {
     ROOT: __dirname,
   },
 };
 
-module.exports = withPlugins([withTM], nextConfig);
+module.exports = nextConfig;

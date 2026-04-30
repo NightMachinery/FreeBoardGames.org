@@ -3,7 +3,12 @@
   "compilerOptions": {
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "fbg-web/*": [
+        "./*"
+      ]
+    }
   },
   "exclude": [
     "node_modules"

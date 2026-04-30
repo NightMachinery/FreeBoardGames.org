@@ -34,6 +34,8 @@ If downloads need a proxy, export your proxy variables before running build comm
 
 The self-host flow installs from the workspace `pnpm-lock.yaml` with `pnpm install --frozen-lockfile --prefer-offline`. pnpm hardlinks packages from its content-addressable store, and maintainers can run `pnpm dedupe` (or `pnpm dedupe --check`) when refreshing dependencies to avoid unnecessary duplicate versions.
 
+If redeploy fails during this install step with `ERR_PNPM_FETCH_404` for a package tarball, check whether the lockfile points at an npm version whose tarball has been removed. Keep dependency versions and `pnpm-lock.yaml` in sync, then rerun `pnpm install --frozen-lockfile --prefer-offline`; for example, `v2/fbg-web` uses `next@13.5.11` because the old `next@13.5.0` tarball returns 404 from the npm registry.
+
 ## What runs
 
 Public traffic is handled by Caddy from `~/Caddyfile`.

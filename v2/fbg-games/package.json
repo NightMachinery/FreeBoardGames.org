@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "license": "AGPL-3.0-or-later",
   "peerDependencies": {
-    "typescript": "*",
-    "@mui/material": "*",
     "@emotion/react": "*",
     "@emotion/styled": "*",
+    "@mui/icons-material": "*",
+    "@mui/material": "*",
+    "@types/recompose": "*",
+    "next": "*",
+    "react": "*",
+    "react-dom": "*",
     "recompose": "*",
-    "@types/recompose": "*"
+    "typescript": "*"
   },
   "packageManager": "pnpm@10.33.2"
 }
