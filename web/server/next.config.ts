@@ -75,6 +75,12 @@ export default withWorkers(
         );
       }
 
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        react: require.resolve('react'),
+        'react-dom': require.resolve('react-dom'),
+      };
+
       if (config.resolve.plugins) {
         config.resolve.plugins.push(new TSConfigPathsPlugin());
       } else {
