@@ -11,18 +11,18 @@ export function parseWordpackText(text: string): string[] {
 }
 
 function labelFromFilename(filename: string): string {
-  return filename.replace(/^\.\//, '');
+  return filename.replace(/^\.\//, '').replace(/\.txt$/i, '');
 }
 
 const WORDPACK_LABEL_ORDER = [
-  'english.txt',
-  'english-alternative.txt',
-  'dutch.txt',
-  'czech.txt',
-  'german.txt',
-  'persian-1.txt',
-  'harry-potter-1.txt',
-  'harry-potter-1-fa.txt',
+  'english',
+  'english-alternative',
+  'dutch',
+  'czech',
+  'german',
+  'persian-1',
+  'harry-potter-1',
+  'harry-potter-1-fa',
 ];
 
 function compareWordpacks(a: PredefinedWords, b: PredefinedWords): number {

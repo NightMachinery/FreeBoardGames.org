@@ -7,15 +7,15 @@ describe('Secret Codes wordpacks', () => {
 
   it('loads the built-in text wordpacks', () => {
     expect(PREDEFINED_WORDS.map((wordpack) => wordpack.label)).toEqual([
-      'english.txt',
-      'english-alternative.txt',
-      'dutch.txt',
-      'czech.txt',
-      'german.txt',
-      'persian-1.txt',
-      'harry-potter-1.txt',
-      'harry-potter-1-fa.txt',
-      'Adult_Fa_1.txt',
+      'english',
+      'english-alternative',
+      'dutch',
+      'czech',
+      'german',
+      'persian-1',
+      'harry-potter-1',
+      'harry-potter-1-fa',
+      'Adult_Fa_1',
     ]);
     expect(PREDEFINED_WORDS[0].words.length).toBeGreaterThanOrEqual(25);
   });
