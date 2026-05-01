@@ -30,8 +30,16 @@ const httpLink = createHttpLink({
 });
 
 export class LobbyService {
-  private static isUnauthorizedGqlError(e: ApolloError) {
-    return e.graphQLErrors.find((error) => error.extensions?.exception?.status === 401);
+  public static isUnauthorizedGqlError(e: Error) {
+    const graphQLErrors = (e as ApolloError).graphQLErrors || [];
+    return graphQLErrors.find((error) => {
+      const extensions = error.extensions as any;
+      return (
+        extensions?.exception?.status === 401 ||
+        extensions?.http?.status === 401 ||
+        extensions?.code === 'UNAUTHENTICATED'
+      );
+    });
   }
 
   private static catchUnauthorizedGql = (dispatch: Dispatch<SyncUserAction>) => (e: ApolloError) => {

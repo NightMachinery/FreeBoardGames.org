@@ -204,24 +204,32 @@ $SITE_ADDRESS {
     @graphql {
         path /graphql*
     }
-    reverse_proxy @graphql 127.0.0.1:$BACKEND_PORT
+    handle @graphql {
+        header Cache-Control "no-store"
+        reverse_proxy 127.0.0.1:$BACKEND_PORT
+    }
 
     @bgio {
         path /socket.io* /games/*
     }
-    reverse_proxy @bgio 127.0.0.1:$BGIO_PORT
+    handle @bgio {
+        header Cache-Control "no-store"
+        reverse_proxy 127.0.0.1:$BGIO_PORT
+    }
 EOF_BLOCK
 
   if [[ "$mode" == 'prod' ]]; then
     cat <<EOF_BLOCK
 
     handle /_next/static/* {
+        header Cache-Control "public, max-age=31536000, immutable"
         root * $next_root
         uri strip_prefix /_next/static
         file_server
     }
 
     handle /static/* {
+        header Cache-Control "public, max-age=31536000, immutable"
         root * $static_root
         uri strip_prefix /static
         file_server
@@ -231,7 +239,10 @@ EOF_BLOCK
 
   cat <<EOF_BLOCK
 
-    reverse_proxy 127.0.0.1:$WEB_PORT
+    handle {
+        header Cache-Control "no-store"
+        reverse_proxy 127.0.0.1:$WEB_PORT
+    }
 }
 EOF_BLOCK
 }

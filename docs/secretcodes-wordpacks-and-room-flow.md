@@ -5,3 +5,5 @@ Secret Codes built-in wordpacks live in `web/src/games/secretcodes/wordpacks/` a
 Rooms may be started before every seat is filled when the joined player count is at least the selected game's minimum player count. When this happens, the server trims the match capacity to the joined players before creating the boardgame.io match.
 
 Finished online matches expose their Play Again next-room link through a public mutation so visitors who open an old finished-game link can follow the chain to the latest room.
+
+If the Online Friend Play button only changes to `Error` after a redeploy or database reset while public GraphQL queries still work, check for a stale browser JWT. The web client stores auth in `localStorage` and authenticated room creation can return GraphQL `UNAUTHENTICATED` with `extensions.http.status = 401`; the client should clear that stale token and reopen the nickname prompt instead of leaving the player on an opaque error button.

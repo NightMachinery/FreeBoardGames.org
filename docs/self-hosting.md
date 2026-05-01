@@ -200,6 +200,10 @@ If the public scheme needs to change between HTTP and HTTPS, rerun setup or star
 
 The old `prepare_once.zsh`, `run.zsh`, and `run_tmux_http.zsh` entrypoints are compatibility shims. New automation should call `self_host.zsh` directly.
 
+### Browser cache behavior
+
+The self-host Caddy block serves HTML and GraphQL responses with `Cache-Control: no-store` so browsers fetch the current app shell and auth state after redeploys or database resets. Hashed build assets under `/_next/static/` and `/static/` are served as `public, max-age=31536000, immutable`; their filenames include build hashes and are safe to cache aggressively.
+
 ### Apollo React package compatibility for Node LTS self-hosting
 
 The legacy Next 9 / React 16 app must use the React-16-era Apollo React wrapper packages for component subscriptions. Importing `Subscription` from `@apollo/client/react/components` pulled in Apollo Client's newer `rehackt` compatibility layer and produced React SSR invariant 321 on Node LTS once stale old servers were no longer masking the rebuilt app. Keep `@apollo/react-components` / `@apollo/react-hooks` pinned to 3.1.5 for the legacy web app, while `@apollo/client` remains pinned separately for code that needs the modern client/link entry points.
