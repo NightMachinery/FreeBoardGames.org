@@ -38,12 +38,13 @@ function compareWordpacks(a: PredefinedWords, b: PredefinedWords): number {
 }
 
 function getWebpackWordpacks(): PredefinedWords[] | null {
-  const maybeRequire = typeof require === 'undefined' ? undefined : (require as any);
-  if (!maybeRequire?.context) {
+  let context: any;
+  try {
+    context = (require as any).context('./wordpacks', false, /\.txt$/);
+  } catch {
     return null;
   }
 
-  const context = maybeRequire.context('./wordpacks', false, /\.txt$/);
   return context
     .keys()
     .map((filename: string) => {

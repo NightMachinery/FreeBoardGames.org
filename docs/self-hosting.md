@@ -208,6 +208,8 @@ The custom Next document intentionally renders a literal `<html>` element instea
 
 The custom document also renders the `#__next` container directly instead of importing `Main` from `next/document`, for the same duplicate-React hook reason.
 
+Secret Codes wordpacks must be loaded with a direct `require.context('./wordpacks', false, /\.txt$/)` call in the browser bundle. Guarding the call by first checking `require.context` can be rewritten by Webpack 4 into a different empty context module, leaving `PREDEFINED_WORDS` empty in the client and causing `Cannot read properties of undefined (reading 'words')` during page hydration.
+
 ### NestJS backend package compatibility
 
 Keep the core NestJS packages in `fbg-server` on one major version. A mixed install with `@nestjs/core@9` and `@nestjs/common` / `@nestjs/platform-express@8` starts scanning modules and then crashes with `Cannot read properties of undefined (reading '__guards__')`. The self-hosted backend currently pins `@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, and `@nestjs/testing` to `8.4.7`, which also keeps the legacy `HttpModule` / `HttpService` imports working without migrating to `@nestjs/axios`.
